@@ -12,18 +12,24 @@ type bot struct {
 
 func (b bot) Run() {
 	fmt.Println("Hello, world")
-	api := bittrex.PokeAPI()
-	fmt.Println(api)
-	res, err := bittrex.Get("https://api.bittrex.com/v3/markets", false)
+	apierr := bittrex.PokeAPI()
+	if apierr != nil {
+		log.Fatal("uhhhh ohhhhh")
+	}
+	res, err := bittrex.GetBitcoin()
 	if err != nil {
 		log.Fatal("uh oh")
 	}
-	fmt.Println(res)
+	fmt.Println(res.High)
 }
+
+var exit = make(chan bool)
 
 func main() {
 	bot := bot{
 		mode: "Sandbox",
 	}
-	bot.Run()
+	go bot.Run()
+	<-exit
+	fmt.Println("Cryptofu shutting down")
 }

@@ -65,8 +65,7 @@ func PokeAPI() error {
 	return errors.New("💩 something is wrong")
 }
 
-// Get performs a http get request to your provided url
-func Get(url string, authenticate bool) (*http.Response, error) {
+func get(url string, authenticate bool) (*http.Response, error) {
 	req, err := http.NewRequest("GET", url, nil)
 	if err != nil {
 		return nil, err
@@ -88,25 +87,24 @@ func Get(url string, authenticate bool) (*http.Response, error) {
 	}
 
 	return resp, nil
-
-	// defer resp.Body.Close()
-
-	// content, err := ioutil.ReadAll(resp.Body)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// // fmt.Println(string(content))
-
-	// var ret response
-	// err = json.Unmarshal(content, &ret)
-	// if err != nil {
-	// 	return nil, err
-	// }
-
-	// return ret.Result, nil
 }
 
-// func GetBitcoin() { https://api.bittrex.com/v3/markets/BTC-USD/summary
+// GetBitcoin gets the current bitcoin market
+func GetBitcoin() (MarketResponse, error) {
+	resp, err := get("https://api.bittrex.com/v3/markets/BTC-USD/summary", false)
 
-// }
+	defer resp.Body.Close()
+
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return MarketResponse{}, err
+	}
+
+	var ret MarketResponse
+	err = json.Unmarshal(content, &ret)
+	if err != nil {
+		return MarketResponse{}, err
+	}
+
+	return ret, nil
+}
