@@ -20,3 +20,9 @@ type MarketResponse struct {
 	PercentChange string
 	UpdatedAt     string
 }
+
+// AccountResponse is an account response
+type AccountResponse struct {
+	SubAccountID string
+	AccountID    string
+}

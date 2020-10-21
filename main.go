@@ -20,7 +20,15 @@ func (b bot) Run() {
 	if err != nil {
 		log.Fatal("uh oh")
 	}
+	fmt.Println("The brice of bitcoin is")
 	fmt.Println(res.High)
+
+	nres, err := bittrex.GetAccount()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Account ID is....")
+	fmt.Println(nres.AccountID)
 }
 
 var exit = make(chan bool)
