@@ -108,7 +108,7 @@ func addAuthHeaders(req *http.Request) {
 }
 
 func makeTimestamp() int64 {
-	return time.Now().UnixNano() / int64(time.Millisecond)
+	return time.Now().UTC().UnixNano() / int64(time.Millisecond)
 }
 
 func makeHash(value string) string {
