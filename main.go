@@ -10,6 +10,8 @@ type bot struct {
 	mode string
 }
 
+var exit = make(chan bool)
+
 func (b bot) Run() {
 	fmt.Println("Hello, world")
 	apierr := bittrex.PokeAPI()
@@ -29,9 +31,16 @@ func (b bot) Run() {
 	}
 	fmt.Println("Account ID is....")
 	fmt.Println(nres.AccountID)
-}
 
-var exit = make(chan bool)
+	nnres, err := bittrex.GetBalances()
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Balances are....")
+	fmt.Println(nnres)
+
+	exit <- true
+}
 
 func main() {
 	bot := bot{

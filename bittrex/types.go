@@ -26,3 +26,14 @@ type AccountResponse struct {
 	SubAccountID string
 	AccountID    string
 }
+
+// BalanceResponse is one account ballance
+type BalanceResponse struct {
+	CurrencySymbol string
+	Total          int
+	Available      int
+	UpdatedAt      string
+}
+
+// BalancesResponce is all account ballances
+type BalancesResponce []BalanceResponse

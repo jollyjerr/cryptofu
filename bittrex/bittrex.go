@@ -96,6 +96,8 @@ func get(url string, authenticate bool) (*http.Response, error) {
 	return resp, nil
 }
 
+// TODO func post()
+
 func addAuthHeaders(req *http.Request) {
 	timestamp := makeTimestamp()
 	hash := makeHash("")
@@ -170,3 +172,28 @@ func GetAccount() (AccountResponse, error) {
 
 	return ret, nil
 }
+
+// GetBalances gets the balances of all currencies in your account
+func GetBalances() (BalancesResponce, error) {
+	resp, err := get("https://api.bittrex.com/v3/balances", true)
+	if err != nil {
+		return BalancesResponce{}, nil
+	}
+
+	defer resp.Body.Close()
+
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return BalancesResponce{}, err
+	}
+
+	var ret BalancesResponce
+	err = json.Unmarshal(content, &ret)
+	if err != nil {
+		return BalancesResponce{}, err
+	}
+
+	return ret, nil
+}
+
+// TODO make a buy or sell request
