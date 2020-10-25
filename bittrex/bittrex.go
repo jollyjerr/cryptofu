@@ -54,6 +54,8 @@ func PokeAPI() error {
 	if response.StatusCode != 200 {
 		return fmt.Errorf("Status Code: %d", response.StatusCode)
 	}
+
+	return nil
 }
 
 func get(url string, authenticate bool) (*http.Response, error) {

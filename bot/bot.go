@@ -7,24 +7,64 @@ import (
 	"time"
 )
 
-// SelfDestruct is a channel the bot can use to kill the go process at any time
-var SelfDestruct = make(chan bool)
-
 // Bot is the main trading bot
 type Bot struct {
 	Mode string
 }
 
-// Run runs the trading bot
-func (b Bot) Run() {
-	doTheThing()
-	checkTicker()
-	time.Sleep(8 * time.Second)
-	checkTicker()
-	time.Sleep(8 * time.Second)
-	checkTicker()
+var (
+	// SelfDestruct is a channel the bot can use to kill the go process at any time
+	SelfDestruct = make(chan bool)
+	// Modes are accepted bot modes
+	Modes = map[string]string{
+		"Testing":     "testing",
+		"Development": "development",
+		"Sandbox":     "sandbox",
+		"Production":  "production",
+	}
+)
 
-	SelfDestruct <- true
+// Run runs the trading bot
+func (bot Bot) Run() {
+	err := bot.runRotation()
+	if err != nil {
+		bot.checkErrorAndAct(err)
+	} else {
+		bot.sleep()
+		bot.Run()
+	}
+}
+
+func (bot Bot) runRotation() error {
+	err := bittrex.PokeAPI()
+	if err != nil {
+		return ErrPing
+	}
+	res, err := bittrex.GetTicker(bittrex.Symbols["Bitcoin"])
+	if err != nil {
+		return err
+	}
+	fmt.Println("Current bitcoin ticker")
+	fmt.Println(res.AskRate)
+	fmt.Println(res.BidRate)
+	fmt.Println(res.LastTradeRate)
+	return nil
+}
+
+func (bot Bot) checkErrorAndAct(err error) {
+	switch err {
+	case ErrPing:
+		log.Println("API Ping failed")
+		bot.sleep()
+		bot.Run()
+	default:
+		SelfDestruct <- true
+	}
+}
+
+func (bot Bot) sleep() {
+	log.Println("Sleeping")
+	time.Sleep(61 * time.Second)
 }
 
 func checkTicker() {

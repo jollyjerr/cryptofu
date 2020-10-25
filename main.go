@@ -7,7 +7,7 @@ import (
 
 func main() {
 	cryptofu := bot.Bot{
-		Mode: "Sandbox",
+		Mode: bot.Modes["Sandbox"],
 	}
 	go cryptofu.Run()
 	<-bot.SelfDestruct
