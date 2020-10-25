@@ -1,11 +1,11 @@
 package bittrex
 
 import (
+	"bytes"
 	"crypto/hmac"
 	"crypto/sha512"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"log"
@@ -36,14 +36,15 @@ var (
 		}
 		return auth
 	}()
+	// Symbols is a stored association of market symbols to paramatize args
+	Symbols = map[string]string{
+		"Bitcoin": "BTC-USD",
+	}
 )
 
 // PokeAPI returns any errors the api throws; nil if the API responds with 0 errors
 func PokeAPI() error {
-	var pingResponse pingResponse
-	timestamp := time.Now().UTC().Unix()
-	URL := fmt.Sprintf("https://socket.bittrex.com/signalr/ping?_=%d", timestamp)
-	response, err := httpClient.Get(URL)
+	response, err := httpClient.Get("https://api.bittrex.com/v3/ping")
 	if err != nil {
 		return err
 	}
@@ -53,19 +54,6 @@ func PokeAPI() error {
 	if response.StatusCode != 200 {
 		return fmt.Errorf("Status Code: %d", response.StatusCode)
 	}
-	body, err := ioutil.ReadAll(response.Body)
-	if err != nil {
-		return err
-	}
-	err = json.Unmarshal(body, &pingResponse)
-	if err != nil {
-		return err
-	}
-	if pingResponse.Response == "pong" {
-		return nil
-	}
-
-	return errors.New("💩 something is wrong")
 }
 
 func get(url string, authenticate bool) (*http.Response, error) {
@@ -74,12 +62,7 @@ func get(url string, authenticate bool) (*http.Response, error) {
 		return nil, err
 	}
 
-	req.Header.Set("User-Agent", "cryptofu")
-	req.Header.Set("Accept", "application/json")
-	req.Header.Set("Cache-Control", "no-cache")
-	req.Header.Add("Cache-Control", "no-store")
-	req.Header.Add("Cache-Control", "must-revalidate")
-
+	addStandardHeaders(req)
 	if authenticate {
 		addAuthHeaders(req)
 	}
@@ -96,7 +79,41 @@ func get(url string, authenticate bool) (*http.Response, error) {
 	return resp, nil
 }
 
-// TODO func post()
+func post(url string, authenticate bool, body interface{}) (*http.Response, error) {
+	marshaledBody, err := json.Marshal(body)
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(marshaledBody))
+	if err != nil {
+		return nil, err
+	}
+
+	addStandardHeaders(req)
+	if authenticate {
+		addAuthHeaders(req)
+	}
+
+	resp, err := httpClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("Status Code: %d", resp.StatusCode)
+	}
+
+	return resp, nil
+}
+
+func addStandardHeaders(req *http.Request) {
+	req.Header.Set("User-Agent", "cryptofu")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("Cache-Control", "no-cache")
+	req.Header.Add("Cache-Control", "no-store")
+	req.Header.Add("Cache-Control", "must-revalidate")
+}
 
 func addAuthHeaders(req *http.Request) {
 	timestamp := makeTimestamp()
@@ -127,9 +144,10 @@ func makeAPISigniture(req *http.Request, timestamp int64, contentHash string) st
 	return hex.EncodeToString(hasher.Sum(nil))
 }
 
-// GetBitcoin gets the current bitcoin market
-func GetBitcoin() (MarketResponse, error) {
-	resp, err := get("https://api.bittrex.com/v3/markets/BTC-USD/summary", false)
+// GetMarket gets the daily market values for a symbol
+func GetMarket(symbol string) (MarketResponse, error) {
+	url := fmt.Sprintf("https://api.bittrex.com/v3/markets/%s/summary", symbol)
+	resp, err := get(url, false)
 	if err != nil {
 		return MarketResponse{}, err
 	}
@@ -145,6 +163,30 @@ func GetBitcoin() (MarketResponse, error) {
 	err = json.Unmarshal(content, &ret)
 	if err != nil {
 		return MarketResponse{}, err
+	}
+
+	return ret, nil
+}
+
+// GetTicker gets the current market ticker for a symbol
+func GetTicker(symbol string) (TickerResponse, error) {
+	url := fmt.Sprintf("https://api.bittrex.com/v3/markets/%s/ticker", symbol)
+	resp, err := get(url, false)
+	if err != nil {
+		return TickerResponse{}, err
+	}
+
+	defer resp.Body.Close()
+
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return TickerResponse{}, err
+	}
+
+	var ret TickerResponse
+	err = json.Unmarshal(content, &ret)
+	if err != nil {
+		return TickerResponse{}, err
 	}
 
 	return ret, nil
@@ -177,7 +219,7 @@ func GetAccount() (AccountResponse, error) {
 func GetBalances() (BalancesResponce, error) {
 	resp, err := get("https://api.bittrex.com/v3/balances", true)
 	if err != nil {
-		return BalancesResponce{}, nil
+		return BalancesResponce{}, err
 	}
 
 	defer resp.Body.Close()
@@ -196,4 +238,29 @@ func GetBalances() (BalancesResponce, error) {
 	return ret, nil
 }
 
-// TODO make a buy or sell request
+// Order requests a new order
+func Order(orderDetails NewOrder) (OrderResponse, error) {
+	resp, err := post("https://api.bittrex.com/v3/orders", true, orderDetails)
+	if err != nil {
+		return OrderResponse{}, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 201 {
+		return OrderResponse{}, fmt.Errorf("Status Code: %d", resp.StatusCode)
+	}
+
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return OrderResponse{}, err
+	}
+
+	var ret OrderResponse
+	err = json.Unmarshal(content, &ret)
+	if err != nil {
+		return OrderResponse{}, err
+	}
+
+	return ret, nil
+}

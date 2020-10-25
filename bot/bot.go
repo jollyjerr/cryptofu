@@ -18,19 +18,24 @@ type Bot struct {
 // Run runs the trading bot
 func (b Bot) Run() {
 	doTheThing()
+	checkTicker()
 	time.Sleep(8 * time.Second)
-	doTheThing()
+	checkTicker()
 	time.Sleep(8 * time.Second)
-	doTheThing()
-	time.Sleep(8 * time.Second)
-	doTheThing()
-	time.Sleep(8 * time.Second)
-	doTheThing()
-	time.Sleep(8 * time.Second)
-	doTheThing()
-	time.Sleep(8 * time.Second)
+	checkTicker()
 
 	SelfDestruct <- true
+}
+
+func checkTicker() {
+	res, err := bittrex.GetTicker(bittrex.Symbols["Bitcoin"])
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Current bitcoin ticker")
+	fmt.Println(res.AskRate)
+	fmt.Println(res.BidRate)
+	fmt.Println(res.LastTradeRate)
 }
 
 func doTheThing() {
@@ -39,11 +44,11 @@ func doTheThing() {
 	if apierr != nil {
 		log.Fatal(apierr)
 	}
-	res, err := bittrex.GetBitcoin()
+	res, err := bittrex.GetMarket(bittrex.Symbols["Bitcoin"])
 	if err != nil {
 		log.Fatal("uh oh")
 	}
-	fmt.Println("The brice of bitcoin is")
+	fmt.Println("The market high of bitcoin is")
 	fmt.Println(res.High)
 
 	nres, err := bittrex.GetAccount()

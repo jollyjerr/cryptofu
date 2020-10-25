@@ -21,6 +21,14 @@ type MarketResponse struct {
 	UpdatedAt     string
 }
 
+// TickerResponse is a ticker response
+type TickerResponse struct {
+	Symbol        string
+	LastTradeRate string
+	BidRate       string
+	AskRate       string
+}
+
 // AccountResponse is an account response
 type AccountResponse struct {
 	SubAccountID string
@@ -37,3 +45,40 @@ type BalanceResponse struct {
 
 // BalancesResponce is all account ballances
 type BalancesResponce []BalanceResponse
+
+// NewOrder is the request body of a new order
+type NewOrder struct {
+	MarketSymbol  string
+	Direction     string
+	Type          string
+	Quantity      int
+	Ceiling       int
+	Limit         int
+	TimeInForce   string
+	ClientOrderID string
+	UseAwards     bool
+}
+
+// OrderResponse is the response from a new order
+type OrderResponse struct {
+	ID            string
+	MarketSymbol  string
+	Direction     string
+	Type          string
+	Quantity      string
+	Limit         string
+	Ceiling       string
+	TimeInForce   string
+	ClientOrderID string
+	FillQuantity  string
+	Commission    string
+	Proceeds      string
+	Status        string
+	CreatedAt     string
+	UpdatedAt     string
+	ClosedAt      string
+	OrderToCancel struct {
+		Type string
+		id   string
+	}
+}
