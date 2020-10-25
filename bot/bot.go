@@ -2,17 +2,28 @@ package bot
 
 import (
 	"cryptofu/bittrex"
-	"fmt"
 	"log"
 	"time"
+
+	"go.uber.org/zap"
 )
 
 // Bot is the main trading bot
 type Bot struct {
-	Mode string
+	Mode   string
+	Symbol string
 }
 
 var (
+	logger = func() *zap.SugaredLogger {
+		logger, err := zap.NewDevelopment()
+		if err != nil {
+			log.Fatal("💩 Error getting logger set up?")
+		}
+		defer logger.Sync()
+		sugar := logger.Sugar()
+		return sugar
+	}()
 	// SelfDestruct is a channel the bot can use to kill the go process at any time
 	SelfDestruct = make(chan bool)
 	// Modes are accepted bot modes
@@ -26,82 +37,50 @@ var (
 
 // Run runs the trading bot
 func (bot Bot) Run() {
-	err := bot.runRotation()
+	err := bot.SingleRotation(bot.Symbol)
 	if err != nil {
 		bot.checkErrorAndAct(err)
 	} else {
 		bot.sleep()
-		bot.Run()
 	}
 }
 
-func (bot Bot) runRotation() error {
+// SingleRotation runs the bot trading logic once
+func (bot Bot) SingleRotation(symbol string) error {
+	logger.Debug("Running a single rotation")
 	err := bittrex.PokeAPI()
 	if err != nil {
+		logger.Error(err)
 		return ErrPing
 	}
-	res, err := bittrex.GetTicker(bittrex.Symbols["Bitcoin"])
+	ticker, err := bittrex.GetTicker(symbol)
 	if err != nil {
-		return err
+		logger.Error(err)
+		return ErrTicker
 	}
-	fmt.Println("Current bitcoin ticker")
-	fmt.Println(res.AskRate)
-	fmt.Println(res.BidRate)
-	fmt.Println(res.LastTradeRate)
+	bot.processTickerUpdate(ticker)
 	return nil
 }
 
 func (bot Bot) checkErrorAndAct(err error) {
 	switch err {
 	case ErrPing:
-		log.Println("API Ping failed")
+		logger.Error("API Ping failed")
 		bot.sleep()
-		bot.Run()
+	case ErrTicker:
+		logger.Error("Failed to get ticker information")
+		bot.sleep()
 	default:
 		SelfDestruct <- true
 	}
 }
 
 func (bot Bot) sleep() {
-	log.Println("Sleeping")
+	logger.Debug("Sleeping")
 	time.Sleep(61 * time.Second)
+	bot.Run()
 }
 
-func checkTicker() {
-	res, err := bittrex.GetTicker(bittrex.Symbols["Bitcoin"])
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Current bitcoin ticker")
-	fmt.Println(res.AskRate)
-	fmt.Println(res.BidRate)
-	fmt.Println(res.LastTradeRate)
-}
-
-func doTheThing() {
-	fmt.Println("Hello, world")
-	apierr := bittrex.PokeAPI()
-	if apierr != nil {
-		log.Fatal(apierr)
-	}
-	res, err := bittrex.GetMarket(bittrex.Symbols["Bitcoin"])
-	if err != nil {
-		log.Fatal("uh oh")
-	}
-	fmt.Println("The market high of bitcoin is")
-	fmt.Println(res.High)
-
-	nres, err := bittrex.GetAccount()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Account ID is....")
-	fmt.Println(nres.AccountID)
-
-	nnres, err := bittrex.GetBalances()
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Balances are....")
-	fmt.Println(nnres)
+func (bot Bot) processTickerUpdate(ticker bittrex.TickerResponse) {
+	logger.Info(ticker)
 }
