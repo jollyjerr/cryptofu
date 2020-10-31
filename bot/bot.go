@@ -13,10 +13,10 @@ import (
 	√1. Collect data points for a "period" of time
 	√2. Sum of the BID prices for the period / number of data points === SMA
 	√3. Calculate the smoothing modifier === 2 ÷ (number of observations + 1)
-	4. Find EMA for current ticker === ticker.Bid * smoothing + pevTickEMA or SMA * (1 - smoothing)
-	5. Find EMA2 for current ticker === EMA * smoothing + pevTickEMA or SMA * (1 - smoothing)
-	6. Find EMA3 for current ticker === EMA2 * smoothing + pevTickEMA or SMA * (1 - smoothing)
-	7. Find TEMA === (3 * EMA) - (3 * EMA2) + EMA3
+	√4. Find EMA for current ticker === ticker.Bid * smoothing + pevTickEMA or SMA * (1 - smoothing)
+	√5. Find EMA2 for current ticker === EMA * smoothing + pevTickEMA or SMA * (1 - smoothing)
+	√6. Find EMA3 for current ticker === EMA2 * smoothing + pevTickEMA or SMA * (1 - smoothing)
+	√7. Find TEMA === (3 * EMA) - (3 * EMA2) + EMA3
 	8. Store TEMA per tick
 	9. If TEMA is higher than prev TEMA for "x" number of times or at "x" percent increase buy
 	10. Activate trailing sell at "x", increase at 1:1 with new TEMA updates. DONT decrese
@@ -87,6 +87,7 @@ func (bot *Bot) Run() {
 // SingleRotation runs the bot trading logic once
 func (bot *Bot) SingleRotation(symbol string) error {
 	logger.Debug("Running a single rotation")
+	logger.Info("TEMA HISTORY:", bot.temaHistory)
 	err := bittrex.PokeAPI()
 	if err != nil {
 		logger.Error(err)
@@ -146,7 +147,7 @@ func (bot *Bot) processTickerUpdate(ticker bittrex.TickerResponse) error {
 		logger.Infof("😴 Not enough info to make a calculation. %d out of %d needed cycles", len(bot.tickerHistory), bot.period)
 	} else {
 		if bot.useSma {
-			tema, err := tickerToTEMA(ticker, bot.sma)
+			tema, err := tickerToTEMA(ticker, bot.sma, bot.smoothingModifier())
 			if err != nil {
 				return err
 			}
@@ -155,7 +156,7 @@ func (bot *Bot) processTickerUpdate(ticker bittrex.TickerResponse) error {
 			// the sma has served it's time
 			bot.useSma = false
 		} else {
-			tema, err := tickerToTEMA(ticker, bot.temaHistory[len(bot.temaHistory)-1])
+			tema, err := tickerToTEMA(ticker, bot.temaHistory[len(bot.temaHistory)-1], bot.smoothingModifier())
 			if err != nil {
 				return err
 			}
