@@ -10,12 +10,6 @@ var (
 	one   = decimal.NewFromInt(1)
 	two   = decimal.NewFromInt(2)
 	three = decimal.NewFromInt(3)
-	four  = decimal.NewFromInt(4)
-	five  = decimal.NewFromInt(5)
-	six   = decimal.NewFromInt(6)
-	seven = decimal.NewFromInt(7)
-	eight = decimal.NewFromInt(8)
-	nine  = decimal.NewFromInt(9)
 )
 
 func calculateSMA(tickers []bittrex.TickerResponse) (decimal.Decimal, error) {
@@ -28,6 +22,10 @@ func calculateSMA(tickers []bittrex.TickerResponse) (decimal.Decimal, error) {
 		sma = sma.Add(num).Div(decimal.NewFromInt(int64(len(tickers))))
 	}
 	return sma, nil
+}
+
+func calculateEMASmoothing(period int) decimal.Decimal {
+	return two.Div(decimal.NewFromInt(int64(period + 1)))
 }
 
 func calculateEMA(forThis decimal.Decimal, basedOn decimal.Decimal, smoothing decimal.Decimal) decimal.Decimal {

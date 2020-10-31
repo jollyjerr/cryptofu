@@ -17,7 +17,7 @@ import (
 	√5. Find EMA2 for current ticker === EMA * smoothing + pevTickEMA or SMA * (1 - smoothing)
 	√6. Find EMA3 for current ticker === EMA2 * smoothing + pevTickEMA or SMA * (1 - smoothing)
 	√7. Find TEMA === (3 * EMA) - (3 * EMA2) + EMA3
-	8. Store TEMA per tick
+	√8. Store TEMA per tick
 	9. If TEMA is higher than prev TEMA for "x" number of times or at "x" percent increase buy
 	10. Activate trailing sell at "x", increase at 1:1 with new TEMA updates. DONT decrese
 	11. If TEMA dips below X, sell
@@ -46,16 +46,15 @@ var (
 
 // Bot is the main trading bot
 type Bot struct {
-	Mode   string
-	Symbol string
-	// How big the slices are
-	sleepSeconds int
-	// How many slices
+	Mode             string
+	Symbol           string
+	sleepSeconds     int
 	period           int
 	sma              decimal.Decimal
 	useSma           bool
 	tickerHistory    []bittrex.TickerResponse
 	temaHistory      []decimal.Decimal
+	macdHistory      []decimal.Decimal
 	maxHistoryLength int
 }
 
@@ -70,6 +69,7 @@ func NewBot(mode string, symbol string) *Bot {
 		useSma:           true,
 		tickerHistory:    make([]bittrex.TickerResponse, 0),
 		temaHistory:      make([]decimal.Decimal, 0),
+		macdHistory:      make([]decimal.Decimal, 0),
 		maxHistoryLength: 1000, // TODO replace with database or flat files? https://github.com/mongodb/mongo-go-driver
 	}
 }
@@ -86,23 +86,38 @@ func (bot *Bot) Run() {
 
 // SingleRotation runs the bot trading logic once
 func (bot *Bot) SingleRotation(symbol string) error {
-	logger.Debug("Running a single rotation")
-	logger.Info("TEMA HISTORY:", bot.temaHistory)
+	logger.Debugf("Running a single rotation %d", len(bot.tickerHistory))
+
+	// Check that api is alive
 	err := bittrex.PokeAPI()
 	if err != nil {
 		logger.Error(err)
 		return ErrPing
 	}
+
+	// Get current ticker of whatever symbol is being tracked
 	ticker, err := bittrex.GetTicker(symbol)
 	if err != nil {
 		logger.Error(err)
 		return ErrTicker
 	}
+
+	// Process that ticker and convert it into useful stats
 	err = bot.processTickerUpdate(ticker)
 	if err != nil {
 		logger.Error(err)
 		return err // TODO gracefully handle this error
 	}
+
+	// Calculate the macd on the current symbol
+	macd, err := bot.calculateMACD()
+	if err != nil {
+		logger.Error(err)
+		return err // TODO gracefully handle this error
+	}
+
+	logger.Info("The MACD is", macd)
+	bot.cleanHistory()
 	return nil
 }
 
@@ -131,8 +146,12 @@ func (bot *Bot) sleep() {
 
 func (bot *Bot) cleanHistory() {
 	if len(bot.tickerHistory) > bot.maxHistoryLength {
-		logger.Debug("Cleaning oldest history record")
+		logger.Debug("Cleaning oldest ticker record")
 		bot.tickerHistory = append(bot.tickerHistory[:0], bot.tickerHistory[1:]...)
+	}
+	if len(bot.temaHistory) > bot.maxHistoryLength {
+		logger.Debug("Cleaning oldest tema record")
+		bot.temaHistory = append(bot.temaHistory[:0], bot.temaHistory[1:]...)
 	}
 }
 
@@ -160,11 +179,10 @@ func (bot *Bot) processTickerUpdate(ticker bittrex.TickerResponse) error {
 			if err != nil {
 				return err
 			}
-			logger.Debug(ticker, tema)
+			logger.Debug("Current TEMA:", tema)
 			bot.temaHistory = append(bot.temaHistory, tema)
 		}
 	}
-	bot.cleanHistory()
 	return nil
 }
 
@@ -183,5 +201,28 @@ func (bot *Bot) updateSMA() error {
 }
 
 func (bot *Bot) smoothingModifier() decimal.Decimal {
-	return decimal.NewFromInt(2).Div(decimal.NewFromInt(int64(bot.period + 1)))
+	return calculateEMASmoothing(bot.period)
+}
+
+func (bot *Bot) calculateMACD() (decimal.Decimal, error) {
+	if len(bot.temaHistory) < 27 {
+		// We do not have enough information to do anything
+		return decimal.Zero, nil
+	}
+	mostRecentTemaValue := bot.temaHistory[len(bot.temaHistory)-1]
+	// Short term
+	shortTermSMA, err := calculateSMA(bot.tickerHistory[:13])
+	if err != nil {
+		return decimal.Zero, err
+	}
+	shortTerm := calculateEMA(mostRecentTemaValue, shortTermSMA, calculateEMASmoothing(12))
+
+	// Long term
+	longTermSMA, err := calculateSMA(bot.tickerHistory[:27])
+	if err != nil {
+		return decimal.Zero, err
+	}
+	longTerm := calculateEMA(mostRecentTemaValue, longTermSMA, calculateEMASmoothing(26))
+
+	return shortTerm.Sub(longTerm), nil
 }
