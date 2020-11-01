@@ -29,6 +29,17 @@ type TickerResponse struct {
 	AskRate       string
 }
 
+// CandleResponse is a candle response
+type CandleResponse struct {
+	StartsAt    string
+	Open        string
+	High        string
+	Low         string
+	Close       string
+	Volume      string
+	QuoteVolume string
+}
+
 // AccountResponse is an account response
 type AccountResponse struct {
 	SubAccountID string

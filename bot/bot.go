@@ -9,20 +9,6 @@ import (
 	"go.uber.org/zap"
 )
 
-/*
-	√1. Collect data points for a "period" of time
-	√2. Sum of the BID prices for the period / number of data points === SMA
-	√3. Calculate the smoothing modifier === 2 ÷ (number of observations + 1)
-	√4. Find EMA for current ticker === ticker.Bid * smoothing + pevTickEMA or SMA * (1 - smoothing)
-	√5. Find EMA2 for current ticker === EMA * smoothing + pevTickEMA or SMA * (1 - smoothing)
-	√6. Find EMA3 for current ticker === EMA2 * smoothing + pevTickEMA or SMA * (1 - smoothing)
-	√7. Find TEMA === (3 * EMA) - (3 * EMA2) + EMA3
-	√8. Store TEMA per tick
-	9. If TEMA is higher than prev TEMA for "x" number of times or at "x" percent increase buy
-	10. Activate trailing sell at "x", increase at 1:1 with new TEMA updates. DONT decrese
-	11. If TEMA dips below X, sell
-*/
-
 var (
 	logger = func() *zap.SugaredLogger {
 		logger, err := zap.NewDevelopment()

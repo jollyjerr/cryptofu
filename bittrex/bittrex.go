@@ -43,6 +43,13 @@ var (
 	Symbols = map[string]string{
 		"Bitcoin": "BTC-USD",
 	}
+	// CandleIntervals is a stored association of candle intervals to paramatize args
+	CandleIntervals = map[string]string{
+		"1min":  "MINUTE_1",
+		"5min":  "MINUTE_5",
+		"1hour": "HOUR_1",
+		"1day":  "DAY_1",
+	}
 )
 
 // PokeAPI returns any errors the api throws; nil if the API responds with 0 errors
@@ -192,6 +199,31 @@ func GetTicker(symbol string) (TickerResponse, error) {
 	err = json.Unmarshal(content, &ret)
 	if err != nil {
 		return TickerResponse{}, err
+	}
+
+	return ret, nil
+}
+
+// GetCandle gets recent candles for a specific market and interval
+func GetCandle(symbol string, interval string) ([]CandleResponse, error) {
+	defaultRes := make([]CandleResponse, 0)
+	url := fmt.Sprintf("https://api.bittrex.com/v3/markets/%s/candles/%s/recent", symbol, interval)
+	resp, err := get(url, false)
+	if err != nil {
+		return defaultRes, err
+	}
+
+	defer resp.Body.Close()
+
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return defaultRes, err
+	}
+
+	var ret []CandleResponse
+	err = json.Unmarshal(content, &ret)
+	if err != nil {
+		return defaultRes, err
 	}
 
 	return ret, nil
