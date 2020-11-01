@@ -26,6 +26,9 @@ var (
 		Timeout: time.Second * 30,
 	}
 	creds = func() Auth {
+		if os.Getenv("TEST") == "true" {
+			return Auth{}
+		}
 		err := godotenv.Load()
 		if err != nil {
 			log.Fatal("💩 Error loading .env file")
