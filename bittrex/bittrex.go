@@ -18,7 +18,7 @@ import (
 
 const (
 	baseURL    = "https://api.bittrex.com"
-	aPIVersion = "3"
+	aPIVersion = "v3"
 )
 
 var (
@@ -54,7 +54,8 @@ var (
 
 // PokeAPI returns any errors the api throws; nil if the API responds with 0 errors
 func PokeAPI() error {
-	response, err := httpClient.Get("https://api.bittrex.com/v3/ping")
+	url := fmt.Sprintf("%s/%s/ping", baseURL, aPIVersion)
+	response, err := httpClient.Get(url)
 	if err != nil {
 		return err
 	}
@@ -158,7 +159,7 @@ func makeAPISigniture(req *http.Request, timestamp int64, contentHash string) st
 
 // GetMarket gets the daily market values for a symbol
 func GetMarket(symbol string) (MarketResponse, error) {
-	url := fmt.Sprintf("https://api.bittrex.com/v3/markets/%s/summary", symbol)
+	url := fmt.Sprintf("%s/%s/markets/%s/summary", baseURL, aPIVersion, symbol)
 	resp, err := get(url, false)
 	if err != nil {
 		return MarketResponse{}, err
@@ -182,7 +183,7 @@ func GetMarket(symbol string) (MarketResponse, error) {
 
 // GetTicker gets the current market ticker for a symbol
 func GetTicker(symbol string) (TickerResponse, error) {
-	url := fmt.Sprintf("https://api.bittrex.com/v3/markets/%s/ticker", symbol)
+	url := fmt.Sprintf("%s/%s/markets/%s/ticker", baseURL, aPIVersion, symbol)
 	resp, err := get(url, false)
 	if err != nil {
 		return TickerResponse{}, err
@@ -207,7 +208,7 @@ func GetTicker(symbol string) (TickerResponse, error) {
 // GetCandle gets recent candles for a specific market and interval
 func GetCandle(symbol string, interval string) ([]CandleResponse, error) {
 	defaultRes := make([]CandleResponse, 0)
-	url := fmt.Sprintf("https://api.bittrex.com/v3/markets/%s/candles/%s/recent", symbol, interval)
+	url := fmt.Sprintf("%s/%s/markets/%s/candles/%s/recent", baseURL, aPIVersion, symbol, interval)
 	resp, err := get(url, false)
 	if err != nil {
 		return defaultRes, err
@@ -231,7 +232,8 @@ func GetCandle(symbol string, interval string) ([]CandleResponse, error) {
 
 // GetAccount gets your account info
 func GetAccount() (AccountResponse, error) {
-	resp, err := get("https://api.bittrex.com/v3/account", true)
+	url := fmt.Sprintf("%s/%s/account", baseURL, aPIVersion)
+	resp, err := get(url, true)
 	if err != nil {
 		return AccountResponse{}, err
 	}
@@ -254,7 +256,8 @@ func GetAccount() (AccountResponse, error) {
 
 // GetBalances gets the balances of all currencies in your account
 func GetBalances() (BalancesResponce, error) {
-	resp, err := get("https://api.bittrex.com/v3/balances", true)
+	url := fmt.Sprintf("%s/%s/balances", baseURL, aPIVersion)
+	resp, err := get(url, true)
 	if err != nil {
 		return BalancesResponce{}, err
 	}
@@ -277,7 +280,8 @@ func GetBalances() (BalancesResponce, error) {
 
 // Order requests a new order
 func Order(orderDetails NewOrder) (OrderResponse, error) {
-	resp, err := post("https://api.bittrex.com/v3/orders", true, orderDetails)
+	url := fmt.Sprintf("%s/%s/orders", baseURL, aPIVersion)
+	resp, err := post(url, true, orderDetails)
 	if err != nil {
 		return OrderResponse{}, err
 	}
