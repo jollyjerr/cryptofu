@@ -98,21 +98,18 @@ func (bot *Bot) SingleRotation(symbol string) error {
 	// Get current ticker of whatever symbol is being tracked
 	ticker, err := bittrex.GetTicker(symbol)
 	if err != nil {
-		logger.Error(err)
 		return ErrTicker
 	}
 
 	// Process that ticker and convert it into useful stats
 	err = bot.processTickerUpdate(ticker)
 	if err != nil {
-		logger.Error(err)
 		return err // TODO gracefully handle this error
 	}
 
 	// Calculate the macd on the current symbol
 	err = bot.checkMACD()
 	if err != nil {
-		logger.Error(err)
 		return err
 	}
 
@@ -132,6 +129,7 @@ func (bot *Bot) checkErrorAndAct(err error) {
 		logger.Info("😴 Not enough info to calculate MACD.")
 		bot.sleep()
 	default:
+		logger.Error(err)
 		SelfDestruct <- true
 	}
 }
