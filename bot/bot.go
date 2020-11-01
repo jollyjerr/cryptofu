@@ -215,7 +215,7 @@ func (bot *Bot) checkMACD() error {
 	if err != nil {
 		return err
 	}
-	logger.Infof("MACD is %d", macd)
+	logger.Infof("MACD is %s for this tema value: %s", macd.StringFixed(4), mostRecentValue.StringFixed(2))
 	bot.macdHistory = append(bot.macdHistory, macd)
 	return nil
 }
