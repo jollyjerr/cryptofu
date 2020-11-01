@@ -166,7 +166,7 @@ func (bot *Bot) processTickerUpdate(ticker bittrex.TickerResponse) error {
 		logger.Infof("😴 Not enough info to make a calculation. %d out of %d needed cycles", len(bot.tickerHistory), bot.period)
 	} else {
 		if bot.useSma {
-			tema, err := tickerToTEMA(ticker, bot.sma, bot.smoothingModifier())
+			tema, err := TickerToTEMA(ticker, bot.sma, bot.smoothingModifier())
 			if err != nil {
 				return err
 			}
@@ -175,7 +175,7 @@ func (bot *Bot) processTickerUpdate(ticker bittrex.TickerResponse) error {
 			// the sma has served it's time
 			bot.useSma = false
 		} else {
-			tema, err := tickerToTEMA(ticker, bot.temaHistory[len(bot.temaHistory)-1], bot.smoothingModifier())
+			tema, err := TickerToTEMA(ticker, bot.temaHistory[len(bot.temaHistory)-1], bot.smoothingModifier())
 			if err != nil {
 				return err
 			}
@@ -189,7 +189,7 @@ func (bot *Bot) processTickerUpdate(ticker bittrex.TickerResponse) error {
 func (bot *Bot) updateSMA() error {
 	if bot.useSma {
 		if len(bot.tickerHistory) >= bot.period {
-			num, err := calculateSMA(bot.tickerHistory)
+			num, err := CalculateSMA(bot.tickerHistory)
 			if err != nil {
 				return err
 			}
@@ -201,7 +201,7 @@ func (bot *Bot) updateSMA() error {
 }
 
 func (bot *Bot) smoothingModifier() decimal.Decimal {
-	return calculateEMASmoothing(bot.period)
+	return CalculateEMASmoothing(bot.period)
 }
 
 func (bot *Bot) calculateMACD() (decimal.Decimal, error) {
@@ -211,18 +211,18 @@ func (bot *Bot) calculateMACD() (decimal.Decimal, error) {
 	}
 	mostRecentTemaValue := bot.temaHistory[len(bot.temaHistory)-1]
 	// Short term
-	shortTermSMA, err := calculateSMA(bot.tickerHistory[:13])
+	shortTermSMA, err := CalculateSMA(bot.tickerHistory[:13])
 	if err != nil {
 		return decimal.Zero, err
 	}
-	shortTerm := calculateEMA(mostRecentTemaValue, shortTermSMA, calculateEMASmoothing(12))
+	shortTerm := CalculateEMA(mostRecentTemaValue, shortTermSMA, CalculateEMASmoothing(12))
 
 	// Long term
-	longTermSMA, err := calculateSMA(bot.tickerHistory[:27])
+	longTermSMA, err := CalculateSMA(bot.tickerHistory[:27])
 	if err != nil {
 		return decimal.Zero, err
 	}
-	longTerm := calculateEMA(mostRecentTemaValue, longTermSMA, calculateEMASmoothing(26))
+	longTerm := CalculateEMA(mostRecentTemaValue, longTermSMA, CalculateEMASmoothing(26))
 
 	return shortTerm.Sub(longTerm), nil
 }
