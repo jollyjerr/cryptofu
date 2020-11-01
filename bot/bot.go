@@ -64,7 +64,7 @@ func NewBot(mode string, symbol string) *Bot {
 		Mode:             mode,
 		Symbol:           symbol,
 		sleepSeconds:     60,
-		period:           2,
+		period:           10,
 		sma:              decimal.NewFromInt(0),
 		useSma:           true,
 		tickerHistory:    make([]bittrex.TickerResponse, 0),
@@ -110,13 +110,12 @@ func (bot *Bot) SingleRotation(symbol string) error {
 	}
 
 	// Calculate the macd on the current symbol
-	macd, err := bot.calculateMACD()
+	err = bot.checkMACD()
 	if err != nil {
 		logger.Error(err)
-		return err // TODO gracefully handle this error
+		return err
 	}
 
-	logger.Info("The MACD is", macd)
 	bot.cleanHistory()
 	return nil
 }
@@ -128,6 +127,9 @@ func (bot *Bot) checkErrorAndAct(err error) {
 		bot.sleep()
 	case ErrTicker:
 		logger.Error("Failed to get ticker information")
+		bot.sleep()
+	case ErrCalcMACDNotEnoughInfo:
+		logger.Info("😴 Not enough info to calculate MACD.")
 		bot.sleep()
 	default:
 		SelfDestruct <- true
@@ -204,25 +206,16 @@ func (bot *Bot) smoothingModifier() decimal.Decimal {
 	return CalculateEMASmoothing(bot.period)
 }
 
-func (bot *Bot) calculateMACD() (decimal.Decimal, error) {
-	if len(bot.temaHistory) < 27 {
-		// We do not have enough information to do anything
-		return decimal.Zero, nil
-	}
-	mostRecentTemaValue := bot.temaHistory[len(bot.temaHistory)-1]
-	// Short term
-	shortTermSMA, err := CalculateSMA(bot.tickerHistory[:13])
+func (bot *Bot) checkMACD() error {
+	mostRecentValue, err := decimal.NewFromString(bot.tickerHistory[len(bot.tickerHistory)-1].BidRate)
 	if err != nil {
-		return decimal.Zero, err
+		return err
 	}
-	shortTerm := CalculateEMA(mostRecentTemaValue, shortTermSMA, CalculateEMASmoothing(12))
-
-	// Long term
-	longTermSMA, err := CalculateSMA(bot.tickerHistory[:27])
+	macd, err := CalculateMACD(mostRecentValue, bot.tickerHistory)
 	if err != nil {
-		return decimal.Zero, err
+		return err
 	}
-	longTerm := CalculateEMA(mostRecentTemaValue, longTermSMA, CalculateEMASmoothing(26))
-
-	return shortTerm.Sub(longTerm), nil
+	logger.Infof("MACD is %d", macd)
+	bot.macdHistory = append(bot.macdHistory, macd)
+	return nil
 }

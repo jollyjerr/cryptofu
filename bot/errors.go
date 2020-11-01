@@ -7,4 +7,6 @@ var (
 	ErrPing = errors.New("ping")
 	// ErrTicker means the api call to get a market ticker failed
 	ErrTicker = errors.New("ticker")
+	// ErrCalcMACDNotEnoughInfo means that you tried to calculate a macd without enough information
+	ErrCalcMACDNotEnoughInfo = errors.New("Not enough info to calculate a MACD value")
 )
