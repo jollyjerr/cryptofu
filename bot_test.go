@@ -1,44 +1,92 @@
 package main
 
 import (
+	"cryptofu/bittrex"
 	"cryptofu/bot"
+	"fmt"
 	"testing"
+
+	"github.com/shopspring/decimal"
 )
 
-func TestCalculateEMASmoothing(t *testing.T) {
-	got := bot.CalculateEMASmoothing(6)
-	if got.StringFixed(2) != "0.29" {
-		t.Errorf("CalculateEMASmoothing was %s, expected 0.29", got.StringFixed(2))
+var (
+	exampleTickers = func() []bittrex.TickerResponse {
+		data := make([]bittrex.TickerResponse, 0)
+		for i := 0; i < 30; i++ {
+			data = append(data, createDemoTickerResponse(i))
+		}
+		return data
+	}()
+)
+
+func createDemoTickerResponse(i int) bittrex.TickerResponse {
+	return bittrex.TickerResponse{
+		BidRate: fmt.Sprintf("%d", 20000+i),
 	}
 }
 
-// ticket1 := bittrex.TickerResponse{BidRate: "12300"}
-// ticket2 := bittrex.TickerResponse{BidRate: "13400"}
-// ticket3 := bittrex.TickerResponse{BidRate: "11350"}
+func checkStringFixed(forThis decimal.Decimal, fixedAmt int32, expected string, t *testing.T) {
+	if forThis.StringFixed(fixedAmt) != expected {
+		t.Errorf("Was %s, expected %s", forThis.StringFixed(fixedAmt), expected)
+	}
+}
 
-// args := []bittrex.TickerResponse{ticket1, ticket2, ticket3}
+/*
+	analysis.go
+*/
 
-// sma, err := bot.CalculateSMA(args)
-// if err != nil {
-// 	fmt.Println(err)
-// }
-// fmt.Println(sma)
+func TestCalculateSMA(t *testing.T) {
+	got, err := bot.CalculateSMA(exampleTickers)
+	if err != nil {
+		t.Error(err)
+	}
+	checkStringFixed(got, 2, "20014.50", t)
+}
 
-// smooth := bot.CalculateEMASmoothing(3)
-// fmt.Println(smooth)
+func TestCalculateEMASmoothing(t *testing.T) {
+	got := bot.CalculateEMASmoothing(6)
+	checkStringFixed(got, 2, "0.29", t)
+}
 
-// ticket4, err := decimal.NewFromString("12200")
-// if err != nil {
-// 	fmt.Println(err)
-// }
+func TestCalculateEMA(t *testing.T) {
+	number := decimal.NewFromInt(20005)
+	lastVal := decimal.NewFromInt(20000)
+	got := bot.CalculateEMA(number, lastVal, bot.CalculateEMASmoothing(2))
+	checkStringFixed(got, 2, "20003.33", t)
+}
 
-// ema := bot.CalculateEMA(ticket4, sma, smooth)
-// fmt.Println(ema)
+func TestCalculateTEMA(t *testing.T) {
+	// TODO
+}
 
-// ticket4InTickerForm := bittrex.TickerResponse{BidRate: "12200"}
-// tema, err := bot.TickerToTEMA(ticket4InTickerForm, sma, smooth)
-// if err != nil {
-// 	fmt.Println(err)
-// }
+func TestTickerToEMA(t *testing.T) {
+	// TODO
+}
 
-// fmt.Println(tema)
+func TestTickerToTEMA(t *testing.T) {
+	// TODO
+}
+
+func TestCalculateMACD(t *testing.T) {
+	// Positive
+	number := decimal.NewFromInt(20100)
+	got, err := bot.CalculateMACD(number, exampleTickers)
+	if err != nil {
+		t.Error(err)
+	}
+	checkStringFixed(got, 2, "1.06", t)
+	// Negative
+	number = decimal.NewFromInt(19000)
+	got, err = bot.CalculateMACD(number, exampleTickers)
+	if err != nil {
+		t.Error(err)
+	}
+	checkStringFixed(got, 2, "-86.69", t)
+	// Zeroish 🤷🏼‍♂️
+	number = decimal.NewFromInt(20087)
+	got, err = bot.CalculateMACD(number, exampleTickers)
+	if err != nil {
+		t.Error(err)
+	}
+	checkStringFixed(got, 2, "0.02", t)
+}

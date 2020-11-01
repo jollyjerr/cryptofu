@@ -72,13 +72,13 @@ func CalculateMACD(forThis decimal.Decimal, fromThese []bittrex.TickerResponse) 
 		return decimal.Zero, ErrCalcMACDNotEnoughInfo
 	}
 	// 12 period ema
-	sma1, err := CalculateSMA(fromThese[13:])
+	sma1, err := CalculateSMA(fromThese[:12])
 	if err != nil {
 		return decimal.Zero, err
 	}
 	ema12P := CalculateEMA(forThis, sma1, p12Smoothing)
 	// 26 period ema
-	sma2, err := CalculateSMA(fromThese[27:])
+	sma2, err := CalculateSMA(fromThese[:26])
 	if err != nil {
 		return decimal.Zero, err
 	}
