@@ -205,8 +205,8 @@ func GetTicker(symbol string) (TickerResponse, error) {
 	return ret, nil
 }
 
-// GetCandle gets recent candles for a specific market and interval
-func GetCandle(symbol string, interval string) ([]CandleResponse, error) {
+// GetCandles gets recent candles for a specific market and interval
+func GetCandles(symbol string, interval string) ([]CandleResponse, error) {
 	defaultRes := make([]CandleResponse, 0)
 	url := fmt.Sprintf("%s/%s/markets/%s/candles/%s/recent", baseURL, aPIVersion, symbol, interval)
 	resp, err := get(url, false)

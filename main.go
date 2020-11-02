@@ -7,8 +7,7 @@ import (
 )
 
 func main() {
-	cryptofu := bot.NewBot(bot.Modes["Development"], bittrex.Symbols["Bitcoin"])
-	go cryptofu.Run()
+	go bot.NewBot(bot.Modes["Development"], bittrex.Symbols["Bitcoin"])
 	<-bot.SelfDestruct
 	fmt.Println("😲 Cryptofu shutting down! 🧨 💥")
 }

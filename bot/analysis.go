@@ -15,17 +15,17 @@ var (
 	p26Smoothing = CalculateEMASmoothing(26)
 )
 
-// CalculateSMA calculates SMA from a slice of tickers
-func CalculateSMA(tickers []bittrex.TickerResponse) (decimal.Decimal, error) {
+// CalculateSMA calculates SMA from a slice of candles
+func CalculateSMA(candles []bittrex.CandleResponse) (decimal.Decimal, error) {
 	sma := decimal.NewFromInt(0)
-	for i := 0; i < len(tickers); i++ {
-		num, err := decimal.NewFromString(tickers[i].BidRate)
+	for i := 0; i < len(candles); i++ {
+		num, err := decimal.NewFromString(candles[i].Close)
 		if err != nil {
 			return sma, err
 		}
 		sma = sma.Add(num)
 	}
-	sma = sma.Div(decimal.NewFromInt(int64(len(tickers))))
+	sma = sma.Div(decimal.NewFromInt(int64(len(candles))))
 	return sma, nil
 }
 
@@ -47,18 +47,18 @@ func CalculateTEMA(forThis decimal.Decimal, basedOn decimal.Decimal, smoothing d
 	return three.Mul(EMA1).Sub(three.Mul(EMA2)).Add(EMA3)
 }
 
-// TickerToEMA converts a ticker value to an EMA value
-func TickerToEMA(ticker bittrex.TickerResponse, lastVal decimal.Decimal, smoothing decimal.Decimal) (decimal.Decimal, error) {
-	bid, err := decimal.NewFromString(ticker.BidRate)
+// CandleToEMA converts a candle value to an EMA value
+func CandleToEMA(candle bittrex.CandleResponse, lastVal decimal.Decimal, smoothing decimal.Decimal) (decimal.Decimal, error) {
+	bid, err := decimal.NewFromString(candle.Close)
 	if err != nil {
 		return decimal.Zero, err
 	}
 	return CalculateEMA(bid, lastVal, smoothing), nil
 }
 
-// TickerToTEMA converts a ticker value into a TEMA value
-func TickerToTEMA(ticker bittrex.TickerResponse, lastVal decimal.Decimal, smoothing decimal.Decimal) (decimal.Decimal, error) {
-	bid, err := decimal.NewFromString(ticker.BidRate)
+// CandleToTEMA converts a candle value into a TEMA value
+func CandleToTEMA(candle bittrex.CandleResponse, lastVal decimal.Decimal, smoothing decimal.Decimal) (decimal.Decimal, error) {
+	bid, err := decimal.NewFromString(candle.Close)
 	if err != nil {
 		return decimal.Zero, err
 	}
@@ -66,19 +66,19 @@ func TickerToTEMA(ticker bittrex.TickerResponse, lastVal decimal.Decimal, smooth
 }
 
 // CalculateMACD calculates a macd value from a slice of tickers
-func CalculateMACD(forThis decimal.Decimal, fromThese []bittrex.TickerResponse) (decimal.Decimal, error) {
+func CalculateMACD(forThis decimal.Decimal, fromThese []bittrex.CandleResponse) (decimal.Decimal, error) {
 	// check data
 	if len(fromThese) < 26 {
 		return decimal.Zero, ErrCalcMACDNotEnoughInfo
 	}
 	// 12 period ema
-	sma1, err := CalculateSMA(fromThese[:12])
+	sma1, err := CalculateSMA(fromThese[len(fromThese)-12:])
 	if err != nil {
 		return decimal.Zero, err
 	}
 	ema12P := CalculateEMA(forThis, sma1, p12Smoothing)
 	// 26 period ema
-	sma2, err := CalculateSMA(fromThese[:26])
+	sma2, err := CalculateSMA(fromThese[len(fromThese)-26:])
 	if err != nil {
 		return decimal.Zero, err
 	}
