@@ -30,7 +30,7 @@ var (
 		"Production":  "production",
 	}
 	periodToSleepSeconds = map[string]int{
-		bittrex.CandleIntervals["1min"]: 60,
+		bittrex.CandleIntervals["1min"]: 90,
 		// TODO the rest of this
 	}
 )
@@ -44,6 +44,7 @@ type Bot struct {
 	candleHistory    []bittrex.CandleResponse
 	temaHistory      []decimal.Decimal
 	macdHistory      []decimal.Decimal
+	signalHistory    []decimal.Decimal
 	maxHistoryLength int
 }
 
@@ -57,6 +58,7 @@ func NewBot(mode string, symbol string) *Bot {
 		candleHistory:    make([]bittrex.CandleResponse, 0),
 		temaHistory:      make([]decimal.Decimal, 0),
 		macdHistory:      make([]decimal.Decimal, 0),
+		signalHistory:    []decimal.Decimal{decimal.Zero},
 		maxHistoryLength: 10000, // TODO replace with database or flat files? Do we even need to? https://github.com/mongodb/mongo-go-driver
 	}
 	babyBot.Setup()
@@ -66,6 +68,7 @@ func NewBot(mode string, symbol string) *Bot {
 // Setup populates a new bot with data and starts the calculations rolling. Errors during this stage are fatal.
 func (bot *Bot) Setup() {
 	bot.SayHi()
+	logger.Info("Getting things ready...")
 	// Get starting data
 	recentCandles, err := bittrex.GetCandles(bot.Symbol, bot.Interval)
 	if err != nil {
@@ -90,10 +93,26 @@ func (bot *Bot) Setup() {
 			logger.Fatal(err)
 		}
 	}
-	// If possible, calculate a starting macd value
-	bot.updateMACD()
+	// Go back and populate macd and signal values in batches of 26
+	for i := 0; i < len(bot.candleHistory); i += 26 {
+		history := bot.candleHistory[i:]
+		val, err := decimal.NewFromString(history[len(history)-1].Close)
+		if err != nil {
+			logger.Fatal(err) // TODO what to do if the period is really big??
+		}
+		macd, err := CalculateMACD(val, history)
+		bot.macdHistory = append(bot.macdHistory, macd)
+		err = bot.updateSignal()
+		if err != nil && err != ErrCalcSignalNotEnoughInfo {
+			logger.Fatal(err)
+		}
+	}
 	// Log startup info
+	macd := bot.macdHistory[len(bot.macdHistory)-1]
+	signal := bot.signalHistory[len(bot.signalHistory)-1]
+	histogram := CalculateHistogram(macd, signal)
 	logger.Infof("Starting SMA value was %s", sma.StringFixed(2))
+	logger.Infof("Current MACD is: %s, MACD Signal is: %s, and MACD Histogram is: %s", macd.StringFixed(2), signal.StringFixed(2), histogram.StringFixed(2))
 	logger.Infof("Bot is ready to go with %d candles processed", len(bot.candleHistory))
 	bot.sleep()
 }
@@ -137,6 +156,13 @@ func (bot *Bot) SingleRotation(symbol string) error {
 		return err
 	}
 
+	// Calculate the macd signal line
+	err = bot.updateSignal()
+	if err != nil {
+		return err
+	}
+
+	bot.logRoundStats()
 	bot.cleanHistory()
 	return nil
 }
@@ -155,6 +181,9 @@ func (bot *Bot) checkErrorAndAct(err error) {
 	case ErrCalcMACDNotEnoughInfo:
 		logger.Info("😴 Not enough info to calculate MACD.")
 		bot.sleep()
+	case ErrCalcSignalNotEnoughInfo:
+		logger.Info("😴 Not enough info to calculate Signal.")
+		bot.sleep()
 	default:
 		logger.Error(err)
 		SelfDestruct <- true
@@ -172,7 +201,6 @@ func (bot *Bot) sleep() {
 }
 
 func (bot *Bot) processCandleUpdate(candle bittrex.CandleResponse) error {
-	// logger.Debug(candle)
 	bot.candleHistory = append(bot.candleHistory, candle)
 	tema, err := CandleToTEMA(candle, bot.temaHistory[len(bot.temaHistory)-1], bot.smoothingModifier())
 	if err != nil {
@@ -205,8 +233,16 @@ func (bot *Bot) updateMACD() error {
 	if err != nil {
 		return err
 	}
-	logger.Infof("MACD is %s for this TEMA value: %s", macd.StringFixed(4), mostRecentValue.StringFixed(2))
 	bot.macdHistory = append(bot.macdHistory, macd)
+	return nil
+}
+
+func (bot *Bot) updateSignal() error {
+	signal, err := CalculateSignalLine(bot.macdHistory, bot.signalHistory[len(bot.signalHistory)-1])
+	if err != nil {
+		return err
+	}
+	bot.signalHistory = append(bot.signalHistory, signal)
 	return nil
 }
 
@@ -223,17 +259,33 @@ func (bot *Bot) cleanHistory() {
 		logger.Debug("Cleaning oldest macd records")
 		bot.macdHistory = bot.macdHistory[len(bot.macdHistory)-bot.maxHistoryLength:]
 	}
+	if len(bot.signalHistory) > bot.maxHistoryLength {
+		logger.Debug("Cleaning oldest signal records")
+		bot.signalHistory = bot.signalHistory[len(bot.signalHistory)-bot.maxHistoryLength:]
+	}
+}
+
+func (bot *Bot) logRoundStats() {
+	candle := bot.candleHistory[len(bot.candleHistory)-1]
+	tema := bot.temaHistory[len(bot.temaHistory)-1]
+	macd := bot.macdHistory[len(bot.macdHistory)-1]
+	signal := bot.signalHistory[len(bot.signalHistory)-1]
+	histogram := CalculateHistogram(macd, signal)
+	logger.Infof("The latest candle is from %s and closed at %s", candle.StartsAt, candle.Close)
+	logger.Infof("The TEMA came out to %s", tema.StringFixed(3))
+	logger.Infof("The MACD is %s, with a signal of %s", macd.StringFixed(2), signal.StringFixed(2))
+	logger.Infof("The histogram value is %s", histogram.StringFixed(2))
 }
 
 // SayHi is a smoke test
 func (bot *Bot) SayHi() {
 	err := bittrex.PokeAPI()
 	if err != nil {
-		logger.Fatal(err)
+		logger.Fatal("💩", err)
 	}
 	account, err := bittrex.GetAccount()
 	if err != nil {
-		logger.Fatal()
+		logger.Fatal(err)
 	}
 	message := `
    _____                  _         __       
@@ -246,5 +298,5 @@ func (bot *Bot) SayHi() {
               |___/|_|                  
 	`
 	fmt.Println(message)
-	logger.Infof("Hello account %s!", account.AccountID)
+	logger.Infof("👋 Hello account %s!", account.AccountID)
 }
