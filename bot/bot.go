@@ -73,7 +73,7 @@ func (bot *Bot) Setup() {
 	}
 	// Calculate the sma and first tema based on bot's period
 	bot.candleHistory = append(bot.candleHistory, recentCandles[:bot.Period]...)
-	sma, err := CalculateSMA(recentCandles[:bot.Period])
+	sma, err := CandlesToSMA(recentCandles[:bot.Period])
 	if err != nil {
 		logger.Fatal(err)
 	}

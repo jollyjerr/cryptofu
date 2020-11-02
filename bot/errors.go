@@ -11,4 +11,6 @@ var (
 	ErrTicker = errors.New("ticker")
 	// ErrCalcMACDNotEnoughInfo means that you tried to calculate a macd without enough information
 	ErrCalcMACDNotEnoughInfo = errors.New("Not enough info to calculate a MACD value")
+	// ErrCalcSignalNotEnoughInfo means that you tried to calculate a signal without enough information
+	ErrCalcSignalNotEnoughInfo = errors.New("Not enough info to calculate a signal line value")
 )
