@@ -57,7 +57,7 @@ func NewBot(mode string, symbol string) *Bot {
 		candleHistory:    make([]bittrex.CandleResponse, 0),
 		temaHistory:      make([]decimal.Decimal, 0),
 		macdHistory:      make([]decimal.Decimal, 0),
-		maxHistoryLength: 1000, // TODO replace with database or flat files? https://github.com/mongodb/mongo-go-driver
+		maxHistoryLength: 10000, // TODO replace with database or flat files? Do we even need to? https://github.com/mongodb/mongo-go-driver
 	}
 	babyBot.Setup()
 	return &babyBot
@@ -110,7 +110,7 @@ func (bot *Bot) Run() {
 
 // SingleRotation runs the bot trading logic once
 func (bot *Bot) SingleRotation(symbol string) error {
-	logger.Debugf("Starting rotation %d", len(bot.candleHistory)+1)
+	logger.Info("Starting rotation")
 
 	// Check that api is alive
 	err := bittrex.PokeAPI()
@@ -163,7 +163,7 @@ func (bot *Bot) checkErrorAndAct(err error) {
 
 func (bot *Bot) sleep() {
 	if bot.Mode == Modes["Development"] || bot.Mode == Modes["Production"] {
-		logger.Debug("Sleeping")
+		logger.Info("Sleeping")
 		time.Sleep(time.Duration(periodToSleepSeconds[bot.Interval]) * time.Second)
 	} else {
 		logger.Debug("Starting next cycle")
@@ -205,7 +205,7 @@ func (bot *Bot) updateMACD() error {
 	if err != nil {
 		return err
 	}
-	logger.Infof("MACD is %s for this tema value: %s", macd.StringFixed(4), mostRecentValue.StringFixed(2))
+	logger.Infof("MACD is %s for this TEMA value: %s", macd.StringFixed(4), mostRecentValue.StringFixed(2))
 	bot.macdHistory = append(bot.macdHistory, macd)
 	return nil
 }

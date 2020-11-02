@@ -10,18 +10,18 @@ import (
 )
 
 var (
-	exampleTickers = func() []bittrex.TickerResponse {
-		data := make([]bittrex.TickerResponse, 0)
-		for i := 0; i < 30; i++ {
-			data = append(data, createDemoTickerResponse(i))
+	exampleCandles = func() []bittrex.CandleResponse {
+		data := make([]bittrex.CandleResponse, 0)
+		for i := 1; i < 31; i++ {
+			data = append(data, createDemoCandleResponse(i))
 		}
 		return data
 	}()
 )
 
-func createDemoTickerResponse(i int) bittrex.TickerResponse {
-	return bittrex.TickerResponse{
-		BidRate: fmt.Sprintf("%d", 20000+i),
+func createDemoCandleResponse(i int) bittrex.CandleResponse {
+	return bittrex.CandleResponse{
+		Close: fmt.Sprintf("%d", 20000+i),
 	}
 }
 
@@ -36,11 +36,11 @@ func checkStringFixed(forThis decimal.Decimal, fixedAmt int32, expected string, 
 */
 
 func TestCalculateSMA(t *testing.T) {
-	got, err := bot.CalculateSMA(exampleTickers)
+	got, err := bot.CalculateSMA(exampleCandles)
 	if err != nil {
 		t.Error(err)
 	}
-	checkStringFixed(got, 2, "20014.50", t)
+	checkStringFixed(got, 2, "20015.50", t)
 }
 
 func TestCalculateEMASmoothing(t *testing.T) {
@@ -59,34 +59,34 @@ func TestCalculateTEMA(t *testing.T) {
 	// TODO
 }
 
-func TestTickerToEMA(t *testing.T) {
+func TestCandleToEMA(t *testing.T) {
 	// TODO
 }
 
-func TestTickerToTEMA(t *testing.T) {
+func TestCandleToTEMA(t *testing.T) {
 	// TODO
 }
 
 func TestCalculateMACD(t *testing.T) {
 	// Positive
-	number := decimal.NewFromInt(20100)
-	got, err := bot.CalculateMACD(number, exampleTickers)
+	number := decimal.NewFromInt(20049)
+	got, err := bot.CalculateMACD(number, exampleCandles)
 	if err != nil {
 		t.Error(err)
 	}
-	checkStringFixed(got, 2, "1.06", t)
+	checkStringFixed(got, 2, "8.44", t)
 	// Negative
-	number = decimal.NewFromInt(19000)
-	got, err = bot.CalculateMACD(number, exampleTickers)
+	number = decimal.NewFromInt(19876)
+	got, err = bot.CalculateMACD(number, exampleCandles)
 	if err != nil {
 		t.Error(err)
 	}
-	checkStringFixed(got, 2, "-86.69", t)
+	checkStringFixed(got, 2, "-5.36", t)
 	// Zeroish 🤷🏼‍♂️
-	number = decimal.NewFromInt(20087)
-	got, err = bot.CalculateMACD(number, exampleTickers)
+	number = decimal.NewFromInt(20031)
+	got, err = bot.CalculateMACD(number, exampleCandles)
 	if err != nil {
 		t.Error(err)
 	}
-	checkStringFixed(got, 2, "0.02", t)
+	checkStringFixed(got, 2, "7.00", t)
 }
