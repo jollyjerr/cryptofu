@@ -29,9 +29,13 @@ var (
 		"Sandbox":     "sandbox",
 		"Production":  "production",
 	}
-	periodToSleepSeconds = map[string]int{
-		bittrex.CandleIntervals["1min"]: 90,
-		// TODO the rest of this
+	intervalToSleepSeconds = map[string]int{
+		bittrex.CandleIntervals["1min"]: 70,
+		bittrex.CandleIntervals["5min"]: 300,
+	}
+	intervalToPeriod = map[string]int{
+		bittrex.CandleIntervals["1min"]: 1,
+		bittrex.CandleIntervals["5min"]: 5,
 	}
 )
 
@@ -54,7 +58,7 @@ func NewBot(mode string, symbol string) *Bot {
 		Mode:             mode,
 		Symbol:           symbol,
 		Interval:         bittrex.CandleIntervals["1min"],
-		Period:           1,
+		Period:           intervalToPeriod[bittrex.CandleIntervals["1min"]],
 		candleHistory:    make([]bittrex.CandleResponse, 0),
 		temaHistory:      make([]decimal.Decimal, 0),
 		macdHistory:      make([]decimal.Decimal, 0),
@@ -80,27 +84,30 @@ func (bot *Bot) Setup() {
 	if err != nil {
 		logger.Fatal(err)
 	}
-	firstTema, err := CandleToTEMA(recentCandles[bot.Period+1], sma, bot.smoothingModifier())
+	firstTema, err := CandleToTEMA(recentCandles[bot.Period*2], sma, bot.smoothingModifier())
 	if err != nil {
 		logger.Fatal(err)
 	}
 	bot.temaHistory = append(bot.temaHistory, firstTema)
 	// Calculate the tema for the remaining candles
-	remainingCandles := recentCandles[bot.Period+2 : len(recentCandles)-1]
+	remainingCandles := recentCandles[bot.Period*3 : len(recentCandles)-1]
 	for i := 0; i < len(remainingCandles); i++ {
 		err = bot.processCandleUpdate(remainingCandles[i])
 		if err != nil {
 			logger.Fatal(err)
 		}
 	}
-	// Go back and populate macd and signal values in batches of 26
-	for i := 0; i < len(bot.candleHistory); i += 26 {
-		history := bot.candleHistory[i:]
+	// Go back and populate macd and signal values
+	for i := 26; i < len(bot.candleHistory); i++ {
+		history := bot.candleHistory[:i]
 		val, err := decimal.NewFromString(history[len(history)-1].Close)
 		if err != nil {
-			logger.Fatal(err) // TODO what to do if the period is really big??
+			logger.Fatal(err)
 		}
 		macd, err := CalculateMACD(val, history)
+		if err == ErrCalcMACDNotEnoughInfo {
+			continue
+		}
 		bot.macdHistory = append(bot.macdHistory, macd)
 		err = bot.updateSignal()
 		if err != nil && err != ErrCalcSignalNotEnoughInfo {
@@ -193,7 +200,7 @@ func (bot *Bot) checkErrorAndAct(err error) {
 func (bot *Bot) sleep() {
 	if bot.Mode == Modes["Development"] || bot.Mode == Modes["Production"] {
 		logger.Info("Sleeping")
-		time.Sleep(time.Duration(periodToSleepSeconds[bot.Interval]) * time.Second)
+		time.Sleep(time.Duration(intervalToSleepSeconds[bot.Interval]) * time.Second)
 	} else {
 		logger.Debug("Starting next cycle")
 	}
@@ -226,6 +233,7 @@ func (bot *Bot) smoothingModifier() decimal.Decimal {
 
 func (bot *Bot) updateMACD() error {
 	mostRecentValue, err := decimal.NewFromString(bot.candleHistory[len(bot.candleHistory)-1].Close)
+	logger.Debug(mostRecentValue)
 	if err != nil {
 		return err
 	}
