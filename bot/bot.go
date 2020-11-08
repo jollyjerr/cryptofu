@@ -35,7 +35,7 @@ var (
 	}
 	intervalToPeriod = map[string]int{
 		bittrex.CandleIntervals["1min"]: 1,
-		bittrex.CandleIntervals["5min"]: 5,
+		bittrex.CandleIntervals["5min"]: 1,
 	}
 )
 
@@ -121,6 +121,7 @@ func (bot *Bot) Setup() {
 	logger.Infof("Starting SMA value was %s", sma.StringFixed(2))
 	logger.Infof("Current MACD is: %s, MACD Signal is: %s, and MACD Histogram is: %s", macd.StringFixed(2), signal.StringFixed(2), histogram.StringFixed(2))
 	logger.Infof("Bot is ready to go with %d candles processed", len(bot.candleHistory))
+	logger.Infof("The last close was %s", bot.candleHistory[len(bot.candleHistory)-1].Close)
 	bot.sleep()
 }
 
@@ -218,8 +219,8 @@ func (bot *Bot) processCandleUpdate(candle bittrex.CandleResponse) error {
 }
 
 func (bot *Bot) processCandlesUpdate(candles []bittrex.CandleResponse) error {
-	for i := 0; i < bot.Period; i++ {
-		err := bot.processCandleUpdate(candles[i])
+	for i := 1; i < bot.Period+1; i++ {
+		err := bot.processCandleUpdate(candles[len(candles)-i])
 		if err != nil {
 			return err
 		}
