@@ -50,6 +50,8 @@ type Bot struct {
 	macdHistory      []decimal.Decimal
 	signalHistory    []decimal.Decimal
 	maxHistoryLength int
+	currentOrder     bittrex.OrderResponse
+	currentTrail     decimal.Decimal
 }
 
 // NewBot makes a new trading bot with very sensible default values
@@ -64,6 +66,8 @@ func NewBot(mode string, symbol string) *Bot {
 		macdHistory:      make([]decimal.Decimal, 0),
 		signalHistory:    []decimal.Decimal{decimal.Zero},
 		maxHistoryLength: 10000, // TODO replace with database or flat files? Do we even need to? https://github.com/mongodb/mongo-go-driver
+		currentOrder:     bittrex.OrderResponse{},
+		currentTrail:     decimal.Zero,
 	}
 	babyBot.Setup()
 	return &babyBot
@@ -170,6 +174,12 @@ func (bot *Bot) SingleRotation(symbol string) error {
 		return err
 	}
 
+	// Decide what to do based on current data
+	err = bot.decideRoundAction()
+	if err != nil {
+		return err
+	}
+
 	bot.logRoundStats()
 	bot.cleanHistory()
 	return nil
@@ -272,6 +282,48 @@ func (bot *Bot) cleanHistory() {
 		logger.Debug("Cleaning oldest signal records")
 		bot.signalHistory = bot.signalHistory[len(bot.signalHistory)-bot.maxHistoryLength:]
 	}
+}
+
+func (bot *Bot) decideRoundAction() error {
+	var (
+		tema           = bot.temaHistory[len(bot.temaHistory)-1]
+		macd           = bot.macdHistory[len(bot.macdHistory)-1]
+		signal         = bot.signalHistory[len(bot.signalHistory)-1]
+		histogram      = CalculateHistogram(macd, signal)
+		currentOrderID = bot.currentOrder.ID
+	)
+
+	if currentOrderID != "" {
+		err := bot.decideShouldSell(tema, currentOrderID)
+		if err != nil {
+			return err
+		}
+	} else {
+		err := bot.decideShouldBuy(tema, histogram)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+func (bot *Bot) decideShouldBuy(tema decimal.Decimal, histogram decimal.Decimal) error {
+	if histogram.GreaterThan(decimal.NewFromInt(6)) {
+		logger.Info("Making a purchase")
+		bot.currentTrail = tema.Sub(decimal.NewFromInt(10))
+		bot.currentOrder = bittrex.OrderResponse{ID: "hello world"}
+	}
+	return nil
+}
+
+func (bot *Bot) decideShouldSell(tema decimal.Decimal, currentOrderID string) error {
+	if tema.LessThan(bot.currentTrail) {
+		logger.Info("Making a sell")
+		bot.currentTrail = decimal.Zero
+		bot.currentOrder = bittrex.OrderResponse{}
+	}
+	return nil
 }
 
 func (bot *Bot) logRoundStats() {
