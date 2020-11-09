@@ -45,6 +45,7 @@ type Bot struct {
 	Symbol           string
 	Interval         string
 	Period           int
+	trailLag         decimal.Decimal
 	candleHistory    []bittrex.CandleResponse
 	temaHistory      []decimal.Decimal
 	macdHistory      []decimal.Decimal
@@ -61,6 +62,7 @@ func NewBot(mode string, symbol string) *Bot {
 		Symbol:           symbol,
 		Interval:         bittrex.CandleIntervals["1min"],
 		Period:           intervalToPeriod[bittrex.CandleIntervals["1min"]],
+		trailLag:         decimal.NewFromInt(10),
 		candleHistory:    make([]bittrex.CandleResponse, 0),
 		temaHistory:      make([]decimal.Decimal, 0),
 		macdHistory:      make([]decimal.Decimal, 0),
@@ -293,7 +295,14 @@ func (bot *Bot) decideRoundAction() error {
 		currentOrderID = bot.currentOrder.ID
 	)
 
+	// Update the trail
 	if currentOrderID != "" {
+		// Update the trail if price has gone up
+		if tema.GreaterThan(bot.temaHistory[len(bot.temaHistory)-2]) {
+			bot.currentTrail = tema.Sub(bot.trailLag)
+			logger.Infof("New trail is at %s", bot.currentTrail.StringFixed(2))
+		}
+
 		err := bot.decideShouldSell(tema, currentOrderID)
 		if err != nil {
 			return err
@@ -308,20 +317,20 @@ func (bot *Bot) decideRoundAction() error {
 	return nil
 }
 
-func (bot *Bot) decideShouldBuy(tema decimal.Decimal, histogram decimal.Decimal) error {
-	if histogram.GreaterThan(decimal.NewFromInt(6)) {
-		logger.Info("Making a purchase")
-		bot.currentTrail = tema.Sub(decimal.NewFromInt(10))
-		bot.currentOrder = bittrex.OrderResponse{ID: "hello world"}
-	}
-	return nil
-}
-
 func (bot *Bot) decideShouldSell(tema decimal.Decimal, currentOrderID string) error {
 	if tema.LessThan(bot.currentTrail) {
 		logger.Info("Making a sell")
 		bot.currentTrail = decimal.Zero
 		bot.currentOrder = bittrex.OrderResponse{}
+	}
+	return nil
+}
+
+func (bot *Bot) decideShouldBuy(tema decimal.Decimal, histogram decimal.Decimal) error {
+	if histogram.GreaterThan(decimal.NewFromInt(6)) {
+		logger.Info("Making a purchase")
+		bot.currentTrail = tema.Sub(bot.trailLag)
+		bot.currentOrder = bittrex.OrderResponse{ID: "hello world"}
 	}
 	return nil
 }
