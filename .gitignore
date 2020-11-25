@@ -5,3 +5,4 @@ cryptofu
 .env
 
 # other
+.DS_Store
