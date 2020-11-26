@@ -75,12 +75,14 @@ func NewBot(mode string, symbol string) *Bot {
 
 // Setup populates a new bot with data and starts the calculations rolling. Errors during this stage are fatal.
 func (bot *Bot) Setup() {
-	bot.SayHi()
-	logger.Info("Getting things ready...")
 	// Point at historical data in testing mode
 	if bot.Mode == Modes["Testing"] {
-		bittrex.SetBaseURL("http://localhost:8080")
+		logger.Info("Running in testing mode: starting fake server")
+		bittrex.SetBaseURL("http://localhost:8000")
+		go bittrex.StartMockServer()
 	}
+	bot.SayHi()
+	logger.Info("Getting things ready...")
 	// Get starting data
 	recentCandles, err := bittrex.GetCandles(bot.Symbol, bot.Interval)
 	if err != nil {
