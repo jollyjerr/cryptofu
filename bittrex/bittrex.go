@@ -17,11 +17,11 @@ import (
 )
 
 const (
-	baseURL    = "https://api.bittrex.com"
 	aPIVersion = "v3"
 )
 
 var (
+	baseURL    = "https://api.bittrex.com"
 	httpClient = http.Client{
 		Timeout: time.Second * 30,
 	}
@@ -51,6 +51,11 @@ var (
 		"1day":  "DAY_1",
 	}
 )
+
+// SetBaseURL allows you to set the base url of the bittrex client
+func SetBaseURL(newURL string) {
+	baseURL = newURL
+}
 
 // PokeAPI returns any errors the api throws; nil if the API responds with 0 errors
 func PokeAPI() error {

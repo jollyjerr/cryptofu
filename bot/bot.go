@@ -24,10 +24,8 @@ var (
 	SelfDestruct = make(chan bool)
 	// Modes are accepted bot modes
 	Modes = map[string]string{
-		"Testing":     "testing",
-		"Development": "development",
-		"Sandbox":     "sandbox",
-		"Production":  "production",
+		"Testing":    "testing",
+		"Production": "production",
 	}
 	intervalToSleepSeconds = map[string]int{
 		bittrex.CandleIntervals["1min"]: 70,
@@ -79,6 +77,10 @@ func NewBot(mode string, symbol string) *Bot {
 func (bot *Bot) Setup() {
 	bot.SayHi()
 	logger.Info("Getting things ready...")
+	// Point at historical data in testing mode
+	if bot.Mode == Modes["Testing"] {
+		bittrex.SetBaseURL("http://localhost:8080")
+	}
 	// Get starting data
 	recentCandles, err := bittrex.GetCandles(bot.Symbol, bot.Interval)
 	if err != nil {
@@ -211,7 +213,7 @@ func (bot *Bot) checkErrorAndAct(err error) {
 }
 
 func (bot *Bot) sleep() {
-	if bot.Mode == Modes["Development"] || bot.Mode == Modes["Production"] {
+	if bot.Mode == Modes["Production"] {
 		logger.Info("Sleeping")
 		time.Sleep(time.Duration(intervalToSleepSeconds[bot.Interval]) * time.Second)
 	} else {
