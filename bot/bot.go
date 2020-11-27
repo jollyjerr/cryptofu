@@ -215,7 +215,7 @@ func (bot *Bot) checkErrorAndAct(err error) {
 }
 
 func (bot *Bot) sleep() {
-	if bot.Mode == Modes["Production"] {
+	if bot.Mode == Modes["Production"] || bot.Mode == Modes["Testing"] {
 		logger.Info("Sleeping")
 		time.Sleep(time.Duration(intervalToSleepSeconds[bot.Interval]) * time.Second)
 	} else {
