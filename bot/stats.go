@@ -25,6 +25,10 @@ func printStats() {
 		diff := sell.Sub(buy)
 		fmt.Println("💰", diff.StringFixed(2))
 	}
+	buys := sum(buyHistory)
+	sells := sum(sellHistory)
+	diff := sells.Sub(buys)
+	fmt.Println("Net 💰:", diff.StringFixed(2))
 }
 
 func saveBuy(buy bittrex.CandleResponse) {
@@ -33,4 +37,16 @@ func saveBuy(buy bittrex.CandleResponse) {
 
 func saveSell(sell bittrex.CandleResponse) {
 	sellHistory = append(sellHistory, sell)
+}
+
+func sum(array []bittrex.CandleResponse) decimal.Decimal {
+	result := decimal.Zero
+	for _, v := range array {
+		num, err := decimal.NewFromString(v.Close)
+		if err != nil {
+			continue
+		}
+		result = result.Add(num)
+	}
+	return result
 }

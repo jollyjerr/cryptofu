@@ -61,7 +61,7 @@ func NewBot(mode string, symbol string) *Bot {
 		Symbol:           symbol,
 		Interval:         bittrex.CandleIntervals["1min"],
 		Period:           intervalToPeriod[bittrex.CandleIntervals["1min"]],
-		trailLag:         decimal.NewFromInt(10),
+		trailLag:         decimal.NewFromInt(1),
 		candleHistory:    make([]bittrex.CandleResponse, 0),
 		temaHistory:      make([]decimal.Decimal, 0),
 		macdHistory:      make([]decimal.Decimal, 0),
@@ -348,7 +348,7 @@ func (bot *Bot) decideShouldSell(tema decimal.Decimal, currentOrderID string) er
 }
 
 func (bot *Bot) decideShouldBuy(tema decimal.Decimal, histogram decimal.Decimal) error {
-	if histogram.GreaterThan(decimal.NewFromInt(6)) {
+	if histogram.GreaterThan(decimal.NewFromInt(5)) {
 		logger.Info("Making a purchase")
 		bot.currentTrail = tema.Sub(bot.trailLag)
 		bot.currentOrder = bittrex.OrderResponse{ID: bot.candleHistory[len(bot.candleHistory)-1].Close, Direction: "buy"}
