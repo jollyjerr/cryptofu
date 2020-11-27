@@ -48,6 +48,7 @@ type Bot struct {
 	temaHistory      []decimal.Decimal
 	macdHistory      []decimal.Decimal
 	signalHistory    []decimal.Decimal
+	orderHistory     []bittrex.OrderResponse
 	maxHistoryLength int
 	currentOrder     bittrex.OrderResponse
 	currentTrail     decimal.Decimal
@@ -65,6 +66,7 @@ func NewBot(mode string, symbol string) *Bot {
 		temaHistory:      make([]decimal.Decimal, 0),
 		macdHistory:      make([]decimal.Decimal, 0),
 		signalHistory:    []decimal.Decimal{decimal.Zero},
+		orderHistory:     make([]bittrex.OrderResponse, 0),
 		maxHistoryLength: 10000, // TODO replace with database or flat files? Do we even need to? https://github.com/mongodb/mongo-go-driver
 		currentOrder:     bittrex.OrderResponse{},
 		currentTrail:     decimal.Zero,
@@ -198,6 +200,13 @@ func (bot *Bot) checkErrorAndAct(err error) {
 		bot.sleep()
 	case ErrCandles:
 		logger.Error("Failed to get Candle information.")
+		if bot.Mode == Modes["Testing"] {
+			logger.Info("Current Order:", bot.currentOrder)
+			logger.Info("Current Trail:", bot.currentTrail)
+			logger.Info("Order History:", len(bot.orderHistory))
+			logger.Info(bot.orderHistory)
+			SelfDestruct <- true
+		}
 		bot.sleep()
 	case ErrTicker:
 		logger.Error("Failed to get ticker information.")
@@ -220,7 +229,6 @@ func (bot *Bot) sleep() {
 		time.Sleep(time.Duration(intervalToSleepSeconds[bot.Interval]) * time.Second)
 	} else {
 		logger.Debug("Starting next cycle")
-		time.Sleep(1 * time.Second)
 	}
 	bot.Run()
 }
@@ -325,6 +333,9 @@ func (bot *Bot) decideRoundAction() error {
 func (bot *Bot) decideShouldSell(tema decimal.Decimal, currentOrderID string) error {
 	if tema.LessThan(bot.currentTrail) {
 		logger.Info("Making a sell")
+		copy := bot.currentOrder
+		copy.Direction = "sell"
+		bot.orderHistory = append(bot.orderHistory, copy)
 		bot.currentTrail = decimal.Zero
 		bot.currentOrder = bittrex.OrderResponse{}
 	}
@@ -335,7 +346,8 @@ func (bot *Bot) decideShouldBuy(tema decimal.Decimal, histogram decimal.Decimal)
 	if histogram.GreaterThan(decimal.NewFromInt(6)) {
 		logger.Info("Making a purchase")
 		bot.currentTrail = tema.Sub(bot.trailLag)
-		bot.currentOrder = bittrex.OrderResponse{ID: "hello world"}
+		bot.currentOrder = bittrex.OrderResponse{ID: bot.candleHistory[len(bot.candleHistory)-1].Close, Direction: "buy"}
+		bot.orderHistory = append(bot.orderHistory, bot.currentOrder)
 	}
 	return nil
 }

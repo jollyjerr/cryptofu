@@ -241,7 +241,6 @@ func GetHistoricalCandles(symbol string, interval string, year int, month int, d
 	defaultRes := make([]CandleResponse, 0)
 	// This will never be sent to the test server
 	url := fmt.Sprintf("https://api.bittrex.com/%s/markets/%s/candles/%s/historical/%d/%d/%d", APIVersion, symbol, interval, year, month, day)
-	fmt.Println(url)
 	resp, err := get(url, false)
 	if err != nil {
 		return defaultRes, err

@@ -1,5 +1,7 @@
 package bittrex
 
+import "errors"
+
 var (
 	candleCache        = []CandleResponse{}
 	lastYearRequested  = 2020
@@ -32,12 +34,13 @@ func getCandleResponse(requestNumber int) ([]CandleResponse, error) {
 	}
 
 	// CASE: We need new data
-	lastDayRequested++
-	future, err := GetHistoricalCandles(Symbols["Bitcoin"], CandleIntervals["1min"], lastYearRequested, lastMonthRequested, lastDayRequested)
-	if err != nil {
-		return []CandleResponse{}, err
-	}
-	candleCache = append(candleCache, future...)
-	data := candleCache[requestNumber]
-	return []CandleResponse{data}, nil
+	// lastDayRequested++
+	// future, err := GetHistoricalCandles(Symbols["Bitcoin"], CandleIntervals["1min"], lastYearRequested, lastMonthRequested, lastDayRequested)
+	// if err != nil {
+	// 	return []CandleResponse{}, err
+	// }
+	// candleCache = append(candleCache, future...)
+	// data := candleCache[requestNumber]
+	// return []CandleResponse{data}, nil
+	return []CandleResponse{}, errors.New("boi")
 }
