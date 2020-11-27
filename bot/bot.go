@@ -204,7 +204,8 @@ func (bot *Bot) checkErrorAndAct(err error) {
 			logger.Info("Current Order:", bot.currentOrder)
 			logger.Info("Current Trail:", bot.currentTrail)
 			logger.Info("Order History:", len(bot.orderHistory))
-			logger.Info(bot.orderHistory)
+			// logger.Info(bot.orderHistory)
+			printStats()
 			SelfDestruct <- true
 		}
 		bot.sleep()
@@ -333,8 +334,12 @@ func (bot *Bot) decideRoundAction() error {
 func (bot *Bot) decideShouldSell(tema decimal.Decimal, currentOrderID string) error {
 	if tema.LessThan(bot.currentTrail) {
 		logger.Info("Making a sell")
+
 		copy := bot.currentOrder
 		copy.Direction = "sell"
+		copy.ID = bot.candleHistory[len(bot.candleHistory)-1].Close
+		saveSell(bot.candleHistory[len(bot.candleHistory)-1])
+
 		bot.orderHistory = append(bot.orderHistory, copy)
 		bot.currentTrail = decimal.Zero
 		bot.currentOrder = bittrex.OrderResponse{}
@@ -348,6 +353,7 @@ func (bot *Bot) decideShouldBuy(tema decimal.Decimal, histogram decimal.Decimal)
 		bot.currentTrail = tema.Sub(bot.trailLag)
 		bot.currentOrder = bittrex.OrderResponse{ID: bot.candleHistory[len(bot.candleHistory)-1].Close, Direction: "buy"}
 		bot.orderHistory = append(bot.orderHistory, bot.currentOrder)
+		saveBuy(bot.candleHistory[len(bot.candleHistory)-1])
 	}
 	return nil
 }

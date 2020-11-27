@@ -33,7 +33,6 @@ func getCandles(w http.ResponseWriter, r *http.Request) {
 	response, err := getCandleResponse(candleRequestCount)
 
 	if err != nil {
-		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 	}
