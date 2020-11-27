@@ -215,11 +215,12 @@ func (bot *Bot) checkErrorAndAct(err error) {
 }
 
 func (bot *Bot) sleep() {
-	if bot.Mode == Modes["Production"] || bot.Mode == Modes["Testing"] {
+	if bot.Mode == Modes["Production"] {
 		logger.Info("Sleeping")
 		time.Sleep(time.Duration(intervalToSleepSeconds[bot.Interval]) * time.Second)
 	} else {
 		logger.Debug("Starting next cycle")
+		time.Sleep(1 * time.Second)
 	}
 	bot.Run()
 }

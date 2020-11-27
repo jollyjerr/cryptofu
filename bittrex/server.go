@@ -30,9 +30,10 @@ func getCandles(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	candleRequestCount++
 
-	response, err := getCandleResponse(fmt.Sprintf("./historical/jan/%d.json", candleRequestCount))
+	response, err := getCandleResponse(candleRequestCount)
 
 	if err != nil {
+		fmt.Println(err)
 		w.WriteHeader(http.StatusInternalServerError)
 		w.Write([]byte(err.Error()))
 	}

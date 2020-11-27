@@ -236,6 +236,33 @@ func GetCandles(symbol string, interval string) ([]CandleResponse, error) {
 	return ret, nil
 }
 
+// GetHistoricalCandles gets historical candles for a specific market and interval and year and month and day
+func GetHistoricalCandles(symbol string, interval string, year int, month int, day int) ([]CandleResponse, error) {
+	defaultRes := make([]CandleResponse, 0)
+	// This will never be sent to the test server
+	url := fmt.Sprintf("https://api.bittrex.com/%s/markets/%s/candles/%s/historical/%d/%d/%d", APIVersion, symbol, interval, year, month, day)
+	fmt.Println(url)
+	resp, err := get(url, false)
+	if err != nil {
+		return defaultRes, err
+	}
+
+	defer resp.Body.Close()
+
+	content, err := ioutil.ReadAll(resp.Body)
+	if err != nil {
+		return defaultRes, err
+	}
+
+	var ret []CandleResponse
+	err = json.Unmarshal(content, &ret)
+	if err != nil {
+		return defaultRes, err
+	}
+
+	return ret, nil
+}
+
 // GetAccount gets your account info
 func GetAccount() (AccountResponse, error) {
 	url := fmt.Sprintf("%s/%s/account", baseURL, APIVersion)
