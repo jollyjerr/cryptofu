@@ -204,8 +204,8 @@ func (bot *Bot) checkErrorAndAct(err error) {
 			logger.Info("Current Order:", bot.currentOrder)
 			logger.Info("Current Trail:", bot.currentTrail)
 			logger.Info("Order History:", len(bot.orderHistory))
-			// logger.Info(bot.orderHistory)
 			printStats()
+			logger.Info(bot.orderHistory)
 			SelfDestruct <- true
 		}
 		bot.sleep()
@@ -312,10 +312,10 @@ func (bot *Bot) decideRoundAction() error {
 	// Update the trail
 	if currentOrderID != "" {
 		// Update the trail if price has gone up
-		if tema.GreaterThan(bot.temaHistory[len(bot.temaHistory)-2]) {
-			bot.currentTrail = tema.Sub(bot.trailLag)
-			logger.Infof("New trail is at %s", bot.currentTrail.StringFixed(2))
-		}
+		// if tema.GreaterThan(bot.temaHistory[len(bot.temaHistory)-2]) {
+		// 	bot.currentTrail = tema.Sub(bot.trailLag)
+		// 	logger.Infof("New trail is at %s", bot.currentTrail.StringFixed(2))
+		// }
 
 		err := bot.decideShouldSell(tema, currentOrderID)
 		if err != nil {
@@ -336,9 +336,9 @@ func (bot *Bot) decideShouldSell(tema decimal.Decimal, currentOrderID string) er
 		logger.Info("Making a sell")
 
 		copy := bot.currentOrder
-		copy.Direction = "sell"
+		copy.Direction = "buy"
 		copy.ID = bot.candleHistory[len(bot.candleHistory)-1].Close
-		saveSell(bot.candleHistory[len(bot.candleHistory)-1])
+		saveBuy(bot.candleHistory[len(bot.candleHistory)-1])
 
 		bot.orderHistory = append(bot.orderHistory, copy)
 		bot.currentTrail = decimal.Zero
@@ -351,9 +351,9 @@ func (bot *Bot) decideShouldBuy(tema decimal.Decimal, histogram decimal.Decimal)
 	if histogram.GreaterThan(decimal.NewFromInt(5)) {
 		logger.Info("Making a purchase")
 		bot.currentTrail = tema.Sub(bot.trailLag)
-		bot.currentOrder = bittrex.OrderResponse{ID: bot.candleHistory[len(bot.candleHistory)-1].Close, Direction: "buy"}
+		bot.currentOrder = bittrex.OrderResponse{ID: bot.candleHistory[len(bot.candleHistory)-1].Close, Direction: "sell"}
 		bot.orderHistory = append(bot.orderHistory, bot.currentOrder)
-		saveBuy(bot.candleHistory[len(bot.candleHistory)-1])
+		saveSell(bot.candleHistory[len(bot.candleHistory)-1])
 	}
 	return nil
 }

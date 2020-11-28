@@ -13,7 +13,7 @@ var (
 )
 
 func printStats() {
-	for i := 0; i < len(sellHistory); i++ {
+	for i := 0; i < len(buyHistory); i++ {
 		buy, err := decimal.NewFromString(buyHistory[i].Close)
 		if err != nil {
 			continue
