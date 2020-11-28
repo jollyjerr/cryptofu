@@ -331,7 +331,8 @@ func (bot *Bot) decideRoundAction() error {
 }
 
 func (bot *Bot) decideShouldSell(tema decimal.Decimal, histogram decimal.Decimal, currentOrderID string) error {
-	if tema.LessThan(bot.currentTrail) && histogram.LessThan(decimal.Zero) {
+	close, _ := decimal.NewFromString(bot.candleHistory[len(bot.candleHistory)-1].Close)
+	if close.LessThan(bot.currentTrail) && histogram.LessThan(decimal.Zero) { // This is the issue - need to fail faster!!!! But taper this control with the histogram so that it does not fail too fast
 		logger.Info("Making a sell")
 
 		copy := bot.currentOrder
@@ -351,7 +352,7 @@ func (bot *Bot) decideShouldSell(tema decimal.Decimal, histogram decimal.Decimal
 }
 
 func (bot *Bot) decideShouldBuy(tema decimal.Decimal, histogram decimal.Decimal) error {
-	if histogram.GreaterThan(decimal.NewFromInt(10)) {
+	if histogram.GreaterThan(decimal.NewFromInt(6)) {
 		logger.Info("Making a purchase")
 		bot.currentTrail = tema.Sub(bot.trailLag)
 		bot.currentOrder = bittrex.OrderResponse{ID: bot.candleHistory[len(bot.candleHistory)-1].Close, Direction: "buy", CreatedAt: bot.candleHistory[len(bot.candleHistory)-1].StartsAt}

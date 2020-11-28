@@ -35,7 +35,7 @@ func getCandleResponse(requestNumber int) ([]CandleResponse, error) {
 
 	// CASE: We need new data
 	lastDayRequested++
-	if lastDayRequested == 5 {
+	if lastDayRequested == 3 {
 		return []CandleResponse{}, errors.New("boi")
 	}
 	future, err := GetHistoricalCandles(Symbols["Bitcoin"], CandleIntervals["1min"], lastYearRequested, lastMonthRequested, lastDayRequested)
