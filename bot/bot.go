@@ -204,8 +204,8 @@ func (bot *Bot) checkErrorAndAct(err error) {
 			logger.Info("Current Order:", bot.currentOrder)
 			logger.Info("Current Trail:", bot.currentTrail)
 			logger.Info("Order History:", len(bot.orderHistory))
-			// logger.Info(bot.orderHistory)
 			printStats()
+			logger.Info(bot.orderHistory)
 			SelfDestruct <- true
 		}
 		bot.sleep()
@@ -260,7 +260,6 @@ func (bot *Bot) smoothingModifier() decimal.Decimal {
 
 func (bot *Bot) updateMACD() error {
 	mostRecentValue, err := decimal.NewFromString(bot.candleHistory[len(bot.candleHistory)-1].Close)
-	logger.Debug(mostRecentValue)
 	if err != nil {
 		return err
 	}
@@ -312,12 +311,12 @@ func (bot *Bot) decideRoundAction() error {
 	// Update the trail
 	if currentOrderID != "" {
 		// Update the trail if price has gone up
-		if tema.GreaterThan(bot.temaHistory[len(bot.temaHistory)-2]) {
+		if tema.GreaterThan(bot.currentTrail) {
 			bot.currentTrail = tema.Sub(bot.trailLag)
 			logger.Infof("New trail is at %s", bot.currentTrail.StringFixed(2))
 		}
 
-		err := bot.decideShouldSell(tema, currentOrderID)
+		err := bot.decideShouldSell(tema, histogram, currentOrderID)
 		if err != nil {
 			return err
 		}
@@ -331,13 +330,17 @@ func (bot *Bot) decideRoundAction() error {
 	return nil
 }
 
-func (bot *Bot) decideShouldSell(tema decimal.Decimal, currentOrderID string) error {
-	if tema.LessThan(bot.currentTrail) {
+func (bot *Bot) decideShouldSell(tema decimal.Decimal, histogram decimal.Decimal, currentOrderID string) error {
+	if tema.LessThan(bot.currentTrail) && histogram.LessThan(decimal.Zero) {
 		logger.Info("Making a sell")
 
 		copy := bot.currentOrder
-		copy.Direction = "sell"
-		copy.ID = bot.candleHistory[len(bot.candleHistory)-1].Close
+		// copy.Direction = "sell"
+		copy.ID = bot.candleHistory[len(bot.candleHistory)-1].Close + "candle"
+		copy.MarketSymbol = tema.StringFixed(2) + "tema"
+		copy.Direction = bot.currentTrail.StringFixed(2) + "trail"
+		copy.CreatedAt = bot.candleHistory[len(bot.candleHistory)-1].StartsAt
+		copy.OrderToCancel.ID = currentOrderID
 		saveSell(bot.candleHistory[len(bot.candleHistory)-1])
 
 		bot.orderHistory = append(bot.orderHistory, copy)
@@ -348,10 +351,10 @@ func (bot *Bot) decideShouldSell(tema decimal.Decimal, currentOrderID string) er
 }
 
 func (bot *Bot) decideShouldBuy(tema decimal.Decimal, histogram decimal.Decimal) error {
-	if histogram.GreaterThan(decimal.NewFromInt(5)) {
+	if histogram.GreaterThan(decimal.NewFromInt(10)) {
 		logger.Info("Making a purchase")
 		bot.currentTrail = tema.Sub(bot.trailLag)
-		bot.currentOrder = bittrex.OrderResponse{ID: bot.candleHistory[len(bot.candleHistory)-1].Close, Direction: "buy"}
+		bot.currentOrder = bittrex.OrderResponse{ID: bot.candleHistory[len(bot.candleHistory)-1].Close, Direction: "buy", CreatedAt: bot.candleHistory[len(bot.candleHistory)-1].StartsAt}
 		bot.orderHistory = append(bot.orderHistory, bot.currentOrder)
 		saveBuy(bot.candleHistory[len(bot.candleHistory)-1])
 	}

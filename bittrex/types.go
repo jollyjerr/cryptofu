@@ -90,6 +90,6 @@ type OrderResponse struct {
 	ClosedAt      string
 	OrderToCancel struct {
 		Type string
-		id   string
+		ID   string
 	}
 }
