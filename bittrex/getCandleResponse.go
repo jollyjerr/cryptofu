@@ -5,25 +5,22 @@ import "errors"
 var (
 	candleCache        = []CandleResponse{}
 	lastYearRequested  = 2020
-	lastMonthRequested = 1
-	lastDayRequested   = 2
+	lastMonthRequested = 6
+	lastDayRequested   = 3
 )
 
 func getCandleResponse(requestNumber int) ([]CandleResponse, error) {
 	// CASE: first request while bot is setting up
 	if requestNumber == 1 {
-		result, err := GetHistoricalCandles(Symbols["Bitcoin"], CandleIntervals["1min"], 2020, 1, 1)
+		result, err := GetHistoricalCandles(Symbols["Bitcoin"], CandleIntervals["1min"], lastYearRequested, lastMonthRequested, 1)
 		if err != nil {
 			return []CandleResponse{}, err
 		}
-		future, err := GetHistoricalCandles(Symbols["Bitcoin"], CandleIntervals["1min"], lastYearRequested, lastMonthRequested, lastDayRequested)
+		future, err := GetHistoricalCandles(Symbols["Bitcoin"], CandleIntervals["1min"], lastYearRequested, lastMonthRequested, 2)
 		if err != nil {
 			return []CandleResponse{}, err
 		}
 		candleCache = future
-		lastDayRequested = 2
-		lastMonthRequested = 1
-		lastYearRequested = 2020
 		return result, nil
 	}
 
@@ -35,7 +32,7 @@ func getCandleResponse(requestNumber int) ([]CandleResponse, error) {
 
 	// CASE: We need new data
 	lastDayRequested++
-	if lastDayRequested == 3 {
+	if lastDayRequested == 7 {
 		return []CandleResponse{}, errors.New("boi")
 	}
 	future, err := GetHistoricalCandles(Symbols["Bitcoin"], CandleIntervals["1min"], lastYearRequested, lastMonthRequested, lastDayRequested)

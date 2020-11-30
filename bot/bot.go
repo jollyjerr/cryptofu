@@ -61,7 +61,7 @@ func NewBot(mode string, symbol string) *Bot {
 		Symbol:           symbol,
 		Interval:         bittrex.CandleIntervals["1min"],
 		Period:           intervalToPeriod[bittrex.CandleIntervals["1min"]],
-		trailLag:         decimal.NewFromInt(1),
+		trailLag:         decimal.NewFromInt(5),
 		candleHistory:    make([]bittrex.CandleResponse, 0),
 		temaHistory:      make([]decimal.Decimal, 0),
 		macdHistory:      make([]decimal.Decimal, 0),
@@ -331,22 +331,27 @@ func (bot *Bot) decideRoundAction() error {
 }
 
 func (bot *Bot) decideShouldSell(tema decimal.Decimal, histogram decimal.Decimal, currentOrderID string) error {
-	close, _ := decimal.NewFromString(bot.candleHistory[len(bot.candleHistory)-1].Close)
-	if close.LessThan(bot.currentTrail) && histogram.LessThan(decimal.Zero) { // This is the issue - need to fail faster!!!! But taper this control with the histogram so that it does not fail too fast
-		logger.Info("Making a sell")
+	// close, _ := decimal.NewFromString(bot.candleHistory[len(bot.candleHistory)-1].Close)
+	if tema.LessThan(bot.currentTrail) { // This is the issue - need to fail faster!!!! But taper this control with the histogram so that it does not fail too fast //  && histogram.LessThan(decimal.NewFromInt(2))
+		start, _ := decimal.NewFromString(bot.currentOrder.ID)
+		goalGain := start.Add(decimal.NewFromInt(10))
+		if tema.GreaterThan(goalGain) {
+			logger.Info("Making a sell")
 
-		copy := bot.currentOrder
-		// copy.Direction = "sell"
-		copy.ID = bot.candleHistory[len(bot.candleHistory)-1].Close + "candle"
-		copy.MarketSymbol = tema.StringFixed(2) + "tema"
-		copy.Direction = bot.currentTrail.StringFixed(2) + "trail"
-		copy.CreatedAt = bot.candleHistory[len(bot.candleHistory)-1].StartsAt
-		copy.OrderToCancel.ID = currentOrderID
-		saveSell(bot.candleHistory[len(bot.candleHistory)-1])
+			copy := bot.currentOrder
+			// copy.Direction = "sell"
+			copy.ID = bot.candleHistory[len(bot.candleHistory)-1].Close + "candle"
+			copy.MarketSymbol = tema.StringFixed(2) + "tema"
+			copy.Direction = bot.currentTrail.StringFixed(2) + "trail"
+			copy.CreatedAt = bot.candleHistory[len(bot.candleHistory)-1].StartsAt
+			copy.OrderToCancel.ID = currentOrderID
+			copy.Status = histogram.StringFixed(2) + "histogram"
+			saveSell(bot.candleHistory[len(bot.candleHistory)-1])
 
-		bot.orderHistory = append(bot.orderHistory, copy)
-		bot.currentTrail = decimal.Zero
-		bot.currentOrder = bittrex.OrderResponse{}
+			bot.orderHistory = append(bot.orderHistory, copy)
+			bot.currentTrail = decimal.Zero
+			bot.currentOrder = bittrex.OrderResponse{}
+		}
 	}
 	return nil
 }
