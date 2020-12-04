@@ -13,4 +13,6 @@ var (
 	ErrCalcMACDNotEnoughInfo = errors.New("Not enough info to calculate a MACD value")
 	// ErrCalcSignalNotEnoughInfo means that you tried to calculate a signal without enough information
 	ErrCalcSignalNotEnoughInfo = errors.New("Not enough info to calculate a signal line value")
+	// ErrNetNewOrder means there was a network error while creating a new order
+	ErrNetNewOrder = errors.New("Network error while creating a new order")
 )

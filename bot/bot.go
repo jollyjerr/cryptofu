@@ -358,12 +358,37 @@ func (bot *Bot) decideShouldSell(tema decimal.Decimal, histogram decimal.Decimal
 
 func (bot *Bot) decideShouldBuy(tema decimal.Decimal, histogram decimal.Decimal) error {
 	if histogram.GreaterThan(decimal.NewFromInt(6)) {
-		logger.Info("Making a purchase")
-		bot.currentTrail = tema.Sub(bot.trailLag)
-		bot.currentOrder = bittrex.OrderResponse{ID: bot.candleHistory[len(bot.candleHistory)-1].Close, Direction: "buy", CreatedAt: bot.candleHistory[len(bot.candleHistory)-1].StartsAt}
-		bot.orderHistory = append(bot.orderHistory, bot.currentOrder)
-		saveBuy(bot.candleHistory[len(bot.candleHistory)-1])
+		logger.Info("Attempting to make a purchase")
+		if limit, err := decimal.NewFromString(bot.candleHistory[len(bot.candleHistory)-1].Close); err == nil {
+			if err := bot.buy(limit); err != nil {
+				return err
+			}
+		}
+		if bot.Mode == Modes["Testing"] {
+			bot.orderHistory = append(bot.orderHistory, bot.currentOrder)
+			saveBuy(bot.candleHistory[len(bot.candleHistory)-1])
+		}
 	}
+	return nil
+}
+
+func (bot *Bot) buy(limit decimal.Decimal) error {
+	limit64, _ := limit.Float64()
+	newOrder := bittrex.NewOrder{
+		MarketSymbol: bot.Symbol,
+		Direction:    "BUY",
+		Type:         "LIMIT",
+		Quantity:     0.000000000000001, //TODO!
+		Limit:        limit64,
+		TimeInForce:  "IMMEDIATE_OR_CANCEL",
+	}
+	orderResponse, err := bittrex.Order(newOrder)
+	if err != nil {
+		return ErrNetNewOrder
+	}
+	SendSlackFinancials(orderResponse)
+	logger.Warn("Made a purchase", orderResponse)
+	bot.currentOrder = orderResponse
 	return nil
 }
 

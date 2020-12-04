@@ -59,15 +59,12 @@ type BalancesResponce []BalanceResponse
 
 // NewOrder is the request body of a new order
 type NewOrder struct {
-	MarketSymbol  string
-	Direction     string
-	Type          string
-	Quantity      int
-	Ceiling       int
-	Limit         int
-	TimeInForce   string
-	ClientOrderID string
-	UseAwards     bool
+	MarketSymbol string
+	Direction    string
+	Type         string
+	Quantity     float64
+	Limit        float64
+	TimeInForce  string
 }
 
 // OrderResponse is the response from a new order
