@@ -26,6 +26,7 @@ var (
 	Modes = map[string]string{
 		"Testing":    "testing",
 		"Production": "production",
+		"Paper":      "paper",
 	}
 	intervalToSleepSeconds = map[string]int{
 		bittrex.CandleIntervals["1min"]: 70,
@@ -225,11 +226,11 @@ func (bot *Bot) checkErrorAndAct(err error) {
 }
 
 func (bot *Bot) sleep() {
-	if bot.Mode == Modes["Production"] {
+	if bot.Mode == Modes["Testing"] {
+		logger.Debug("Starting next cycle")
+	} else {
 		logger.Info("Sleeping")
 		time.Sleep(time.Duration(intervalToSleepSeconds[bot.Interval]) * time.Second)
-	} else {
-		logger.Debug("Starting next cycle")
 	}
 	bot.Run()
 }
@@ -373,22 +374,24 @@ func (bot *Bot) decideShouldBuy(tema decimal.Decimal, histogram decimal.Decimal)
 }
 
 func (bot *Bot) buy(limit decimal.Decimal) error {
-	limit64, _ := limit.Float64()
-	newOrder := bittrex.NewOrder{
-		MarketSymbol: bot.Symbol,
-		Direction:    "BUY",
-		Type:         "LIMIT",
-		Quantity:     0.000000000000001, //TODO!
-		Limit:        limit64,
-		TimeInForce:  "IMMEDIATE_OR_CANCEL",
+	if bot.Mode != Modes["Paper"] {
+		limit64, _ := limit.Float64()
+		newOrder := bittrex.NewOrder{
+			MarketSymbol: bot.Symbol,
+			Direction:    "BUY",
+			Type:         "LIMIT",
+			Quantity:     0.000000000000001, //TODO!
+			Limit:        limit64,
+			TimeInForce:  "IMMEDIATE_OR_CANCEL",
+		}
+		orderResponse, err := bittrex.Order(newOrder)
+		if err != nil {
+			return ErrNetNewOrder
+		}
+		SendSlackFinancials(orderResponse)
+		logger.Warn("Made a purchase", orderResponse)
+		bot.currentOrder = orderResponse
 	}
-	orderResponse, err := bittrex.Order(newOrder)
-	if err != nil {
-		return ErrNetNewOrder
-	}
-	SendSlackFinancials(orderResponse)
-	logger.Warn("Made a purchase", orderResponse)
-	bot.currentOrder = orderResponse
 	return nil
 }
 
@@ -426,4 +429,5 @@ func (bot *Bot) SayHi() {
 	`
 	fmt.Println(message)
 	logger.Infof("👋 Hello account %s!", account.AccountID)
+	logger.Infof("🚨 This bot instance is running in %s mode.", bot.Mode)
 }
