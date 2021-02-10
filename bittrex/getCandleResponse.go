@@ -9,14 +9,14 @@ var (
 	lastDayRequested   = 3
 )
 
-func getCandleResponse(requestNumber int) ([]CandleResponse, error) {
+func getCandleResponse(requestNumber int, symbol string) ([]CandleResponse, error) {
 	// CASE: first request while bot is setting up
 	if requestNumber == 1 {
-		result, err := GetHistoricalCandles(Symbols["Bitcoin"], CandleIntervals["1min"], lastYearRequested, lastMonthRequested, 1)
+		result, err := GetHistoricalCandles(symbol, CandleIntervals["1min"], lastYearRequested, lastMonthRequested, 1)
 		if err != nil {
 			return []CandleResponse{}, err
 		}
-		future, err := GetHistoricalCandles(Symbols["Bitcoin"], CandleIntervals["1min"], lastYearRequested, lastMonthRequested, 2)
+		future, err := GetHistoricalCandles(symbol, CandleIntervals["1min"], lastYearRequested, lastMonthRequested, 2)
 		if err != nil {
 			return []CandleResponse{}, err
 		}
@@ -33,9 +33,9 @@ func getCandleResponse(requestNumber int) ([]CandleResponse, error) {
 	// CASE: We need new data
 	lastDayRequested++
 	if lastDayRequested == 7 {
-		return []CandleResponse{}, errors.New("boi")
+		return []CandleResponse{}, errors.New("boi") // temporary solution for stopping tests
 	}
-	future, err := GetHistoricalCandles(Symbols["Bitcoin"], CandleIntervals["1min"], lastYearRequested, lastMonthRequested, lastDayRequested)
+	future, err := GetHistoricalCandles(symbol, CandleIntervals["1min"], lastYearRequested, lastMonthRequested, lastDayRequested)
 	if err != nil {
 		return []CandleResponse{}, err
 	}

@@ -43,6 +43,7 @@ var (
 	// Symbols is a stored association of market symbols to paramatize args
 	Symbols = map[string]string{
 		"Bitcoin": "BTC-USD",
+		"Doge":    "DOGE-USD",
 	}
 	// CandleIntervals is a stored association of candle intervals to paramatize args
 	CandleIntervals = map[string]string{

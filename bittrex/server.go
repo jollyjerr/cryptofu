@@ -11,6 +11,7 @@ import (
 
 var (
 	candleRequestCount = 0
+	symbol             = Symbols["Doge"]
 )
 
 func getPing(w http.ResponseWriter, r *http.Request) {
@@ -30,7 +31,7 @@ func getCandles(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	candleRequestCount++
 
-	response, err := getCandleResponse(candleRequestCount)
+	response, err := getCandleResponse(candleRequestCount, symbol)
 
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
@@ -46,7 +47,7 @@ func StartMockServer() {
 
 	r.HandleFunc(fmt.Sprintf("/%s/ping", APIVersion), getPing).Methods("GET")
 	r.HandleFunc(fmt.Sprintf("/%s/account", APIVersion), getAccount).Methods("GET")
-	r.HandleFunc(fmt.Sprintf("/%s/markets/BTC-USD/candles/MINUTE_1/recent", APIVersion), getCandles).Methods("GET")
+	r.HandleFunc(fmt.Sprintf("/%s/markets/%s/candles/MINUTE_1/recent", APIVersion, symbol), getCandles).Methods("GET")
 
 	log.Fatal(http.ListenAndServe(":8000", r))
 }
