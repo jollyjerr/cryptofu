@@ -1,5 +1,32 @@
 version: "3"
 services:
+  pgadmin:
+    container_name: cryptofu-pgadmin
+    image: dpage/pgadmin4
+    depends_on: 
+      - postgresql
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=jollyjerr@gmail.com
+      - PGADMIN_DEFAULT_PASSWORD=dev
+    volumes:
+       - pgadmin:/root/.pgadmin
+    ports:
+      - "53603:53603"
+      - "80:80"
+    networks:
+      - postgres
+
+  postgresql:
+    image: "bitnami/postgresql:latest"
+    container_name: cryptofu-db
+    ports:
+      - 5432:5432
+    environment:
+      - POSTGRESQL_USERNAME=tofu-dev
+      - POSTGRESQL_PASSWORD=dev
+      - POSTGRESQL_DATABASE=cryptofu
+      - POSTGRESQL_POSTGRES_PASSWORD=adminpassword
+
   dozzle:
     container_name: dozzle
     image: amir20/dozzle:latest
@@ -7,7 +34,16 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     ports:
       - 8080:8080
+
   bot:
     container_name: bot
     build: .
+
+networks:
+  postgres:
+    driver: bridge
+
+volumes:
+    postgres:
+    pgadmin:
   
