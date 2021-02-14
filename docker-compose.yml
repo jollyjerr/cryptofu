@@ -1,21 +1,5 @@
 version: "3"
 services:
-  pgadmin:
-    container_name: cryptofu-pgadmin
-    image: dpage/pgadmin4
-    depends_on: 
-      - postgresql
-    environment:
-      - PGADMIN_DEFAULT_EMAIL=jollyjerr@gmail.com
-      - PGADMIN_DEFAULT_PASSWORD=dev
-    volumes:
-       - pgadmin:/root/.pgadmin
-    ports:
-      - "53603:53603"
-      - "80:80"
-    networks:
-      - postgres
-
   postgresql:
     image: "bitnami/postgresql:latest"
     container_name: cryptofu-db
@@ -37,13 +21,10 @@ services:
 
   bot:
     container_name: bot
+    depends_on: 
+      - postgresql
     build: .
-
-networks:
-  postgres:
-    driver: bridge
 
 volumes:
     postgres:
-    pgadmin:
   

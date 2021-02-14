@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"os"
 	"time"
 )
 
@@ -16,7 +17,7 @@ var (
 
 // SendSlackFinancials is for buy and sell logging only
 func SendSlackFinancials(message interface{}) error {
-	_, err := post("https://hooks.slack.com/services/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", message)
+	_, err := post(os.Getenv("SLACK_URL"), message)
 	if err != nil {
 		return err
 	}
@@ -25,7 +26,7 @@ func SendSlackFinancials(message interface{}) error {
 
 // SendSlackLogging sends general logs
 func SendSlackLogging(message interface{}) error {
-	_, err := post("https://hooks.slack.com/services/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", message)
+	_, err := post(os.Getenv("SLACK_URL"), message)
 	if err != nil {
 		return err
 	}
